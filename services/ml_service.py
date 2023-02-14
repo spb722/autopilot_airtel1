@@ -304,7 +304,7 @@ def association_process(dag_run_id, db):
                 print("outputed crosssell files ")
                 for number in [1, 2, 3]:
                     print('going to find upsell for number', number)
-                    uc.find_upsell(type_service='upsell', anticendent_number=number, )
+                    uc.find_upsell(type_service='upsell', anticendent_number=number,segement_name=item, cluster_number=cluster )
                 print("done with upsell cross sell")
 
                 print('UpsellCrossell completed')
@@ -584,7 +584,7 @@ class UpsellCrossell(object):
             print('the error occoured in find crosssell', e)
             raise ValueError(e)
 
-    def find_upsell(self, type_service, anticendent_number):
+    def find_upsell(self, type_service, anticendent_number, segement_name, cluster_number):
         try:
 
             is_upsell = 1
@@ -611,7 +611,7 @@ class UpsellCrossell(object):
                     info.recommended_pack = str(row['conci'])
                     info.number_of_current_packs = int(row['antecedents_length'])
                     info.current_pack = str(row['antecedents1'])
-
+                    info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
@@ -678,6 +678,7 @@ class UpsellCrossell(object):
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
                     info.recommended_pack = str(row['conci'])
+                    info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
                     info.number_of_current_packs = int(row['antecedents_length'])
                     info.current_pack = str(row['antecedents1'])
 
@@ -739,6 +740,7 @@ class UpsellCrossell(object):
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
                     info.recommended_pack = str(row['conci'])
+                    info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
                     info.number_of_current_packs = int(row['antecedents_length'])
                     info.current_pack = str(row['antecedents1'])
 
