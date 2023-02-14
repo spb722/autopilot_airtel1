@@ -88,7 +88,7 @@ class Features:
 
     CUSTOMER_FEATURES = CUSTOMER_CATEG_FEATURES + CUSTOMER_CONTI_FEATURES
 
-    CUSTOMER_DTYPES = {'total_data_rev': 'float32', 'og_total_voice_revenue': 'float32'}
+    CUSTOMER_DTYPES = {'total_revenue': 'float32'}
 
     RECHARGE_DTYPES = {'total_recharge_cnt': 'float32', 'total_rechargeamount': 'float32'}
     RECHARGE_COUNT_COL_NAME = 'total_recharge_cnt'

@@ -428,9 +428,10 @@ def segementation(dag_run_id):
 
         trend_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend")
         trend = vaex.open(trend_path)
+        print("loaded trend")
         trend = trend[['msisdn', 'rev_segment_m1', 'rev_segment_m2', 'rev_segment_m3', 'trend']]
-        replace_map = cfg.Config.get_banding_confitions().get("common_reverse")
-        print("loaded rend")
+        replace_map = cfg.Config().get_banding_confitions().get("common_reverse")
+
         trend['rev_segment_m1'] = trend.rev_segment_m1.map(replace_map)
         trend['rev_segment_m2'] = trend.rev_segment_m2.map(replace_map)
         trend['rev_segment_m3'] = trend.rev_segment_m3.map(replace_map)
