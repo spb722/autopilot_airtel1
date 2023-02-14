@@ -162,7 +162,9 @@ class Config:
 
     def get_banding_confitions(self):
         return {
-            "common": {"Zero": 1, "very_low": 2, "low": 3, "medium": 4, "high": 5, "high_high": 6}
+            "common": {"Zero": 1, "very_low": 2, "low": 3, "medium": 4, "high": 5, "high_high": 6},
+            "common_reverse": {1: "Zero", 2: "very_low", 3: "low", 4: "medium", 5: "high",
+                               6: "high_high"}
         }
 
     feature_unit_list = ['unit_in_mb', 'price']

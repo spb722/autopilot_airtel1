@@ -429,12 +429,7 @@ def segementation(dag_run_id):
         trend_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend")
         trend = vaex.open(trend_path)
         trend = trend[['msisdn', 'rev_segment_m1', 'rev_segment_m2', 'rev_segment_m3', 'trend']]
-        replace_map = {1: "Zero", 2: "<=N50", 3: "N50 - N100", 4: "N100 - N200", 5: "N200 - N300", 6: "N300 - N400",
-                       7: "N400 - N500",
-                       8: "N500 - N1000", 9: "N1000 - N1200", 10: "N1200 - N1500", 11: "N1500 - N2000",
-                       12: "N2000 - N3000",
-                       13: "N3000 - N4000", 14: "N4000 - N5000", 15: "N5000-N10000", 16: "N10000 - N20000",
-                       17: "N20000 - N30000", 18: "N30000+"}
+        replace_map = cfg.Config.get_banding_confitions().get("common_reverse")
         print("loaded rend")
         trend['rev_segment_m1'] = trend.rev_segment_m1.map(replace_map)
         trend['rev_segment_m2'] = trend.rev_segment_m2.map(replace_map)
