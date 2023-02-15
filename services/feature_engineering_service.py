@@ -389,7 +389,7 @@ def status_process(dag_run_id):
         trend_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend")
         trend_filtered_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend_filtered")
         trend = dd.read_parquet(trend_path)
-        trend_filter = trend.query("tot_revm1 > 0 and tot_revm2 > 0 and tot_revm1 >0 ")
+        trend_filter = trend.query("tot_revm1 > 0 or tot_revm2 > 0 or tot_revm3 >0 ")
         trend_filter.to_parquet(trend_filtered_path)
         ic("the length of trend df ", len(trend))
         ic("the unique msisdn in trend df ", trend['msisdn'].nunique().compute())
@@ -463,7 +463,7 @@ def segementation(dag_run_id):
         purchase = vaex.open(purchase_path)
         print("loaded purchase")
 
-        trend_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend")
+        trend_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend_filtered")
         trend = vaex.open(trend_path)
         print("loaded trend")
         trend = trend[['msisdn', 'rev_segment_m1', 'rev_segment_m2', 'rev_segment_m3', 'trend']]
@@ -481,26 +481,44 @@ def segementation(dag_run_id):
         rfm = vaex.open(rfm_path)
         rfm = rfm[['msisdn', 'Segment']]
         print("loaded rfm")
+#------------nnew logic----------------#
+        trend_rfm = trend.join(rfm, on='msisdn', how="inner")
+        trend_rfm_recharge = trend_rfm.join(recharge, on='msisdn', how="left")
+        trend_rfm_recharge['recharge_count_pattern_m1'] = trend_rfm_recharge['recharge_count_pattern_m1'].fillna("m1_0")
+        trend_rfm_recharge['recharge_count_pattern_m2'] = trend_rfm_recharge['recharge_count_pattern_m2'].fillna("m2_0")
+        trend_rfm_recharge['recharge_count_pattern_m3'] = trend_rfm_recharge['recharge_count_pattern_m3'].fillna("m3_0")
+        trend_rfm_recharge_usage = trend_rfm_recharge.join(usage, on='msisdn', how="left")
+        trend_rfm_recharge_usage_purchase = trend_rfm_recharge_usage.join(purchase, on='msisdn', how="left")
+        trend_rfm_recharge_usage_purchase['recharge_count_pattern_m1'] = trend_rfm_recharge_usage_purchase[
+            'recharge_count_pattern_m1'].fillna("m1_0")
+        trend_rfm_recharge_usage_purchase['recharge_count_pattern_m2'] = trend_rfm_recharge_usage_purchase[
+            'recharge_count_pattern_m2'].fillna("m2_0")
+        trend_rfm_recharge_usage_purchase['recharge_count_pattern_m3'] = trend_rfm_recharge_usage_purchase[
+            'recharge_count_pattern_m3'].fillna("m3_0")
 
-        recharge_trend = recharge.join(trend, on='msisdn', how="inner")
-        recharge_trend_usage = recharge_trend.join(usage, on='msisdn', how="inner")
-        ic("mergeing rechare and trend ", recharge_trend_usage['msisdn'].nunique())
+# ------------nnew logic----------------#
+#------------------------inner join logic-------------------------------#
 
-        recharge_trend_usage_rfm = recharge_trend_usage.join(rfm, on='msisdn', how="inner")
+        # recharge_trend = recharge.join(trend, on='msisdn', how="inner")
+        # recharge_trend_usage = recharge_trend.join(usage, on='msisdn', how="inner")
+        # ic("mergeing rechare and trend ", recharge_trend_usage['msisdn'].nunique())
+        #
+        # recharge_trend_usage_rfm = recharge_trend_usage.join(rfm, on='msisdn', how="inner")
+        #
+        # ic("mergeing rechare and trend  and rfm ", recharge_trend_usage_rfm['msisdn'].nunique())
+        #
+        # recharge_trend_usage_rfm_pur = recharge_trend_usage_rfm.join(purchase, on='msisdn', how="inner")
+        #
+        # ic("mergeing rechare and trend  and rfm  purchase", recharge_trend_usage_rfm_pur['msisdn'].nunique())
+        #
+        # recharge_trend_usage_rfm_pur.export_csv(
+        #     os.path.join(cfg.Config.ml_location, "recharge_trend_usage_rfm_pur.csv"))
+        #
+        # df = recharge_trend_usage_rfm_pur.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
+        # df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
+        # ------------------------inner join logic  end-------------------------------#
 
-        ic("mergeing rechare and trend  and rfm ", recharge_trend_usage_rfm['msisdn'].nunique())
-
-        recharge_trend_usage_rfm_pur = recharge_trend_usage_rfm.join(purchase, on='msisdn', how="inner")
-
-        ic("mergeing rechare and trend  and rfm  purchase", recharge_trend_usage_rfm_pur['msisdn'].nunique())
-
-        recharge_trend_usage_rfm_pur.export_csv(
-            os.path.join(cfg.Config.ml_location, "recharge_trend_usage_rfm_pur.csv"))
-
-        df = recharge_trend_usage_rfm_pur.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
-        df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
-
-        segment_data(recharge_trend_usage_rfm_pur, dag_run_id)
+        segment_data(trend_rfm_recharge_usage_purchase, dag_run_id)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=400, detail="error occoureds in status_process" + str(e))

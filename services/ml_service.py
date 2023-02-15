@@ -492,8 +492,8 @@ class UpsellCrossell(object):
                 print("row['conci'] is ", row['conci'])
                 info.recommended_pack = str(row['conci'])
                 info.number_of_current_packs = int(row['antecedents_length'])
-                info.current_pack = str(row['antecedents1'])
-                info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
+                info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+                info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
                 print("added crossel info to db")
                 AssociationRepo.create(db=self.db, info=info)
             # ------------------------adding to db -------------------------------#
@@ -633,8 +633,8 @@ class UpsellCrossell(object):
                     print("row['conci'] is ", row['conci'])
                     info.recommended_pack = str(row['conci'])
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = str(row['antecedents1'])
-                    info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
+                    info.current_pack ="|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+                    info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
@@ -750,9 +750,9 @@ class UpsellCrossell(object):
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
                     info.recommended_pack = str(row['conci'])
-                    info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
+                    info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = str(row['antecedents1'])
+                    info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
@@ -819,9 +819,9 @@ class UpsellCrossell(object):
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
                     info.recommended_pack = str(row['conci'])
-                    info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
+                    info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = str(row['antecedents1'])
+                    info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
@@ -949,8 +949,8 @@ class UpsellCrossell(object):
             info = schemas.SegementInfo()
             info.segment_name = segements.segment_name
             info.dag_run_id = self.dag_run_id
-            info.current_product = str(row['antecedents1'])
-            info.current_products_names = str(row['antecedents1'])
+            info.current_product = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+            info.current_products_names ="|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
             # if anticendent_number == 1:
             #     info.current_products_names = str(row['antecedents1'])
             # elif anticendent_number == 2:
@@ -1058,7 +1058,7 @@ class RuleExtreaction(object):
                     info = schemas.SegementInfo()
                     # info.actual_rule
                     info.dag_run_id = self.dag_run_id
-                    info.segment_name = f"{item}_{str(cluster)}"
+                    info.segment_name = f"{item}|{str(cluster)}"
                     info.segment_length = str(len(df))
                     info.customer_status = "active"
                     info.query = rule
