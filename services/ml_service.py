@@ -78,9 +78,9 @@ def k_modes(dag_run_id):
         with open(path_d, 'rb') as handle:
             data = pickle.load(handle)
 
-        #needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
-        #filtered_dict = {k: v for k, v in data.items() if k in needed_segements}
-        filtered_dict = {k: v for k, v in data.items() }
+        # needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
+        # filtered_dict = {k: v for k, v in data.items() if k in needed_segements}
+        filtered_dict = {k: v for k, v in data.items()}
 
         for item, val in filtered_dict.items():
             # val is the path item is the segment name
@@ -123,7 +123,7 @@ def feature_selection(dag_run_id):
         features_path = os.path.join(cfg.Config.ml_location, dag_run_id, "features.pickle")
         with open(path_d, 'rb') as handle:
             data = pickle.load(handle)
-        #needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
+        # needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
         # filtered_dict = {k: v for k, v in data.items() if k in needed_segements}
         filtered_dict = {k: v for k, v in data.items()}
         result_features = {}
@@ -165,9 +165,9 @@ def matrix_filter(dag_run_id):
         path_d = os.path.join(cfg.Config.ml_location, dag_run_id, "dict.pickle")
         with open(path_d, 'rb') as handle:
             data = pickle.load(handle)
-        #needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
-        #filtered_dict = {k: v for k, v in data.items() if k in needed_segements}
-        filtered_dict = {k: v for k, v in data.items() }
+        # needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
+        # filtered_dict = {k: v for k, v in data.items() if k in needed_segements}
+        filtered_dict = {k: v for k, v in data.items()}
         result = {}
         for item, val in filtered_dict.items():
             # val is the path item is the segment name
@@ -214,7 +214,7 @@ def encode_units(x):
 
 
 class Fpgrowth(object):
-    def __init__(self, purchase, dag_run_id,item):
+    def __init__(self, purchase, dag_run_id, item):
         self.purchase = purchase
         self.frequent_itemsets = None
         self.results = None
@@ -231,7 +231,8 @@ class Fpgrowth(object):
 
         self.results_processed.to_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "association.csv"), header=True,
                                       index=False)
-        self.results_processed.to_csv(os.path.join(cfg.Config.ml_location, dag_run_id, str(item)+"_association.csv"), header=True,
+        self.results_processed.to_csv(os.path.join(cfg.Config.ml_location, dag_run_id, str(item) + "_association.csv"),
+                                      header=True,
                                       index=False)
 
     def form_associations(self):
@@ -291,10 +292,10 @@ def association_process(dag_run_id, db):
         pack_info = os.path.join(cfg.Config.etl_location, 'pack_info.csv')
         pack_info_df = pd.read_csv(pack_info)
         data = load_picke_file(result_dict_path)
-        #needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
+        # needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
         # filtered_dict = {k: v for k, v in data.items() if k in needed_segements}
         # filtered_data__dict = {k: v for k, v in data_dict.items() if k in needed_segements}
-        filtered_dict = {k: v for k, v in data.items() }
+        filtered_dict = {k: v for k, v in data.items()}
         filtered_data__dict = {k: v for k, v in data_dict.items()}
         for item, val in filtered_dict.items():
             data = pd.read_csv(filtered_data__dict.get(item))
@@ -303,7 +304,7 @@ def association_process(dag_run_id, db):
                 data_temp = data[data['label'] == cluster]
                 purchase_filtered = purchase[purchase[msisdn_name].isin(data_temp[msisdn_name])]
                 print('len of purchase in association_process ', len(purchase_filtered))
-                fp = Fpgrowth(purchase_filtered, dag_run_id)
+                fp = Fpgrowth(purchase_filtered, dag_run_id, item=item)
                 print('Fpgrowth completed')
                 uc = UpsellCrossell(dag_run_id=dag_run_id, pack_info=pack_info_df, result=fp.results, db=db)
                 uc.determine_service_type()
@@ -312,7 +313,8 @@ def association_process(dag_run_id, db):
                 print("outputed crosssell files ")
                 for number in [1, 2, 3]:
                     print('going to find upsell for number', number)
-                    uc.find_upsell(type_service='upsell', anticendent_number=number,segement_name=item, cluster_number=cluster )
+                    uc.find_upsell(type_service='upsell', anticendent_number=number, segement_name=item,
+                                   cluster_number=cluster)
                 print("done with upsell cross sell")
 
                 print('UpsellCrossell completed')
@@ -400,8 +402,8 @@ class UpsellCrossell(object):
             print("isnide get_pack_type")
             print("pack_name is ", pack_name)
             print("group_type is ", group_type)
-            #print("f.Features.PACK_INFO_PACK_COLUMN_NAME is ", f.Features.PACK_INFO_PACK_COLUMN_NAME)
-            #print("self.pack_info is ", self.pack_info)
+            # print("f.Features.PACK_INFO_PACK_COLUMN_NAME is ", f.Features.PACK_INFO_PACK_COLUMN_NAME)
+            # print("self.pack_info is ", self.pack_info)
             print("len self.pack_info is ", len(self.pack_info))
 
             data = self.pack_info[self.pack_info[f.Features.PACK_INFO_PACK_COLUMN_NAME] == pack_name][group_type]
@@ -435,8 +437,6 @@ class UpsellCrossell(object):
             temp_set.add(get_pack_type(consequents_list[0]))
             print('temp_set 1  is', temp_set)
 
-
-
             if len(temp_set) > 1:
                 service = "corsssell"
                 type_service = ','.join(temp_set)
@@ -457,22 +457,28 @@ class UpsellCrossell(object):
 
             if len(df) > 0:
                 df = df.sort_values(by="confidence", ascending=False)
-                confidence = int(df.head(1)['confidence'].values[0]*100)
-                current_pack = list(eval(df.head(1)['antecedents1'].values[0]))[0]
-                recommended_pack = str(df.head(1)['conci'].values[0])
-                number_of_current_packs = int(df.head(1)['antecedents_length'].values[0])
-                if confidence > .50:
-                    segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
-                                                                              segement_name=f"{segement_name}_{str(int(cluster_number))}",
-                                                                              cluster_number=int(cluster_number))
-                    segements.campaign_type = "cross_sell"
-                    segements.confidence = confidence
-                    segements.recommended_product_name = recommended_pack
-                    segements.current_product = current_pack
+                segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
+                                                                          segement_name=f"{segement_name}_{str(int(cluster_number))}",
+                                                                          cluster_number=int(cluster_number))
 
-                    SegementRepo.update(self.db, segements)
+                self.insert_segementinfo(segements, 1, df, "crossell")
+                SegementRepo.deleteById(self.db, [segements.id])
+                # confidence = int(df.head(1)['confidence'].values[0] * 100)
+                # current_pack = list(eval(df.head(1)['antecedents1'].values[0]))[0]
+                # recommended_pack = str(df.head(1)['conci'].values[0])
+                # number_of_current_packs = int(df.head(1)['antecedents_length'].values[0])
+                # if confidence > .50:
+                #     segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
+                #                                                               segement_name=f"{segement_name}_{str(int(cluster_number))}",
+                #                                                               cluster_number=int(cluster_number))
+                #     segements.campaign_type = "cross_sell"
+                #     segements.confidence = confidence
+                #     segements.recommended_product_name = recommended_pack
+                #     segements.current_product = current_pack
+                #
+                #     SegementRepo.update(self.db, segements)
 
-                    # self.update_info("antecedents1", "cross_sell", segement_name, cluster_number)
+                # self.update_info("antecedents1", "cross_sell", segement_name, cluster_number)
             # ------------------------adding to db -------------------------------#
             for index, row in df.iterrows():
                 print(row['confidence'])
@@ -483,58 +489,56 @@ class UpsellCrossell(object):
                 info.support = round(float(row['support']), 2)
                 info.confidence = round(float(row['confidence']), 2)
                 info.lift = round(float(row['lift']), 2)
-                print("row['conci'] is ",row['conci'])
+                print("row['conci'] is ", row['conci'])
                 info.recommended_pack = str(row['conci'])
                 info.number_of_current_packs = int(row['antecedents_length'])
                 info.current_pack = str(row['antecedents1'])
                 info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
                 print("added crossel info to db")
-
                 AssociationRepo.create(db=self.db, info=info)
             # ------------------------adding to db -------------------------------#
 
 
-#----------------------------to br looked at ------------------------------------------------------#
-            # df_2 = df[df['val'] == 'crossell'].sort_values(by='confidence', ascending=False)
-            #
-            # df_2.drop_duplicates(subset=['consequents1'], inplace=True)
-            # df_cross_conci = df_2.drop_duplicates(subset=['conci'])
-            # df_cross_anti = df_2.drop_duplicates(subset=['anti'])
-            # df_2 = pd.concat([df_cross_conci, df_cross_anti])
-            # df_2.drop_duplicates(subset=['anti', 'conci'], keep='first')
-            # # df_2.drop(['antecedent support', 'consequent support', 'support', 'lift',
-            # #            'antecedents1', 'consequents1'], axis=1, inplace=True, errors='ignore')
-            #
-            # df_3 = df_2.merge(
-            #     self.pack_info[
-            #         f.Features.ALL_PACK_FEATURES].add_prefix(
-            #         "ANTECEDENT_"), left_on='anti', right_on='ANTECEDENT_' + f.Features.PACK_INFO_PACK_COLUMN_NAME,
-            #     how='left')
-            # df_3 = df_3.merge(
-            #     self.pack_info[
-            #         f.Features.ALL_PACK_FEATURES].add_prefix(
-            #         "CONSEQUENT_"), left_on='conci', right_on='CONSEQUENT_' + f.Features.PACK_INFO_PACK_COLUMN_NAME,
-            #     how='left')
-            # # print("length of df_3 before condition is  ", len(df_3))
-            # # df_3 = df_3[df_3['ANTECEDENT_price'] < df_3['CONSEQUENT_price']]
-            # # print("length of df_3 after condition  is  ", len(df_3))
-            #
-            # if os.path.exists(os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv')):
-            #
-            #     crossell_one_df = pd.read_csv(
-            #         os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv'))
-            #     df_3 = df_3.drop(['val', 'anti', 'conci'], axis=1)
-            #     final_crossell_one_df = pd.concat([crossell_one_df, df_3])
-            #     final_crossell_one_df.to_csv(
-            #         os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv'),
-            #         header=True,
-            #         index=False)
-            # else:
-            #
-            #     df_3.drop(['val', 'anti', 'conci'], axis=1, errors='ignore').to_csv(
-            #         os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv'),
-            #         header=True, index=False)
-
+        # ----------------------------to br looked at ------------------------------------------------------#
+        # df_2 = df[df['val'] == 'crossell'].sort_values(by='confidence', ascending=False)
+        #
+        # df_2.drop_duplicates(subset=['consequents1'], inplace=True)
+        # df_cross_conci = df_2.drop_duplicates(subset=['conci'])
+        # df_cross_anti = df_2.drop_duplicates(subset=['anti'])
+        # df_2 = pd.concat([df_cross_conci, df_cross_anti])
+        # df_2.drop_duplicates(subset=['anti', 'conci'], keep='first')
+        # # df_2.drop(['antecedent support', 'consequent support', 'support', 'lift',
+        # #            'antecedents1', 'consequents1'], axis=1, inplace=True, errors='ignore')
+        #
+        # df_3 = df_2.merge(
+        #     self.pack_info[
+        #         f.Features.ALL_PACK_FEATURES].add_prefix(
+        #         "ANTECEDENT_"), left_on='anti', right_on='ANTECEDENT_' + f.Features.PACK_INFO_PACK_COLUMN_NAME,
+        #     how='left')
+        # df_3 = df_3.merge(
+        #     self.pack_info[
+        #         f.Features.ALL_PACK_FEATURES].add_prefix(
+        #         "CONSEQUENT_"), left_on='conci', right_on='CONSEQUENT_' + f.Features.PACK_INFO_PACK_COLUMN_NAME,
+        #     how='left')
+        # # print("length of df_3 before condition is  ", len(df_3))
+        # # df_3 = df_3[df_3['ANTECEDENT_price'] < df_3['CONSEQUENT_price']]
+        # # print("length of df_3 after condition  is  ", len(df_3))
+        #
+        # if os.path.exists(os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv')):
+        #
+        #     crossell_one_df = pd.read_csv(
+        #         os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv'))
+        #     df_3 = df_3.drop(['val', 'anti', 'conci'], axis=1)
+        #     final_crossell_one_df = pd.concat([crossell_one_df, df_3])
+        #     final_crossell_one_df.to_csv(
+        #         os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv'),
+        #         header=True,
+        #         index=False)
+        # else:
+        #
+        #     df_3.drop(['val', 'anti', 'conci'], axis=1, errors='ignore').to_csv(
+        #         os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'crossell_one.csv'),
+        #         header=True, index=False)
 
         # ----------------------------to br looked at ------------------------------------------------------#
         except Exception as e:
@@ -602,15 +606,20 @@ class UpsellCrossell(object):
             if type_service != 'upsell':
                 is_upsell = 0
 
+            segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
+                                                                      segement_name=f"{segement_name}_{str(int(cluster_number))}",
+                                                                      cluster_number=int(cluster_number))
+
             if anticendent_number == 1:
                 print("inside antecedent 1 ")
                 df = self.df_upsell_df[self.df_upsell_df['antecedents_length'] == 1]
                 data = df.sort_values(by='confidence', ascending=False)
                 print(len(data.drop_duplicates(subset=['consequents1'])))
-                print("data.columns inside antecedent 1 is ",data.columns)
+                print("data.columns inside antecedent 1 is ", data.columns)
                 data1 = data.apply(self.check_upsell, anticendent_number=1, axis=1)
                 print('check_upsell completed')
                 # ------------------- insert db ------------------------------
+
                 # ------------------------adding to db -------------------------------#
                 for index, row in data1.iterrows():
                     print(row['confidence'])
@@ -621,7 +630,7 @@ class UpsellCrossell(object):
                     info.support = round(float(row['support']), 2)
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
-                    print("row['conci'] is ",row['conci'])
+                    print("row['conci'] is ", row['conci'])
                     info.recommended_pack = str(row['conci'])
                     info.number_of_current_packs = int(row['antecedents_length'])
                     info.current_pack = str(row['antecedents1'])
@@ -633,47 +642,91 @@ class UpsellCrossell(object):
                     print('info is', info)
                     AssociationRepo.create(db=self.db, info=info)
                     print('all  inserted')
-                # ------------------------adding to db -------------------------------#
 
+                self.insert_segementinfo(segements, anticendent_number, data1, "upsell")
+
+                # ------------------------adding to db -------------------------------#
+                # if data1 is None or len(data1) == 0:
+                #     ic(f"the segement {segement_name} and cluser {cluster_number}  has no upsell 1 data1 ")
+                #     return
+                # ic(f"the segement {segement_name} and cluser {cluster_number} ")
+                # data2 = data1[data1['is_upsell'] == is_upsell]
+                # if data2 is None or len(data2) == 0:
+                #     ic(f"the segement {segement_name} and cluser {cluster_number}  has no upsell 1")
+                #     return
+                # data2 = data2.sort_values(by='confidence', ascending=False)
+                # data2 = data2.head(5)
+                # segments_list = []
+                # for index, row in data2.iterrows():
+                #     info = schemas.SegementInfo()
+                #     info.segment_name = segements.segment_name
+                #     info.dag_run_id = self.dag_run_id
+                #     info.current_product = str(row['antecedents1'])
+                #     info.current_products_names = str(row['antecedents1'])
+                #     info.recommended_product_id = str(row['conci'])
+                #     info.recommended_product_name = str(row['conci'])
+                #     info.predicted_arpu = None
+                #     info.current_arpu = None
+                #     info.segment_length = segements.segment_length
+                #     info.rule = None
+                #     info.actual_rule = None
+                #     info.uplift = None
+                #     info.incremental_revenue = None
+                #     info.campaign_type = "upsell"
+                #     info.campaign_name = None
+                #     info.action_key = None
+                #     info.robox_id = None
+                #     info.samples = segements.samples
+                #     info.segment_name = segements.segment_name
+                #     info.current_ARPU_band = None
+                #     info.current_revenue_impact = None
+                #     info.customer_status = segements.customer_status
+                #     info.query = segements.query
+                #     info.cluster_no = segements.cluster_no
+                #     info.confidence = round(float(row['confidence']), 2)
+                #     segments_list.append(info)
+                #
+                # for segment in segments_list:
+                #     SegementRepo.create(self.db, segment)
                 # ------------------------------------------------------------
 
-        #---------------------ipo venda -----------------------------------------#
-                # data2 = data1[data1['is_upsell'] == is_upsell]
-                # print('here1')
-                # data3 = data2.drop_duplicates(subset=['consequents1'])
-                # data3['antecedent_one'] = data3['antecedents1'].apply(lambda x: list(eval(x))[0])
-                # print('here2')
-                # data3['consequents1'] = data3['consequents1'].apply(lambda x: list(eval(x))[0])
-                # print('here3')
-                # data3 = data3.merge(
-                #     self.pack_info[f.Features.ALL_PACK_FEATURES].add_prefix(
-                #         "ANTECEDENT_"),
-                #     left_on='antecedent_one', right_on="ANTECEDENT_" + f.Features.PACK_INFO_PACK_COLUMN_NAME,
-                #     how='left')
-                # data3 = data3.merge(
-                #     self.pack_info[f.Features.ALL_PACK_FEATURES].add_prefix(
-                #         "CONSEQUENT_"),
-                #     left_on='consequents1', right_on='CONSEQUENT_' + f.Features.PACK_INFO_PACK_COLUMN_NAME, how='left')
-                # # data3.drop(
-                # #     ['antecedent_one', 'consequents1', 'service', 'antecedent support', 'consequent support', 'lift'],
-                # #     axis=1, inplace=True)
-                # data4 = data3[data3['ANTECEDENT_' + f.Features.PACK_INFO_CATEGORY] == data3[
-                #     'CONSEQUENT_' + f.Features.PACK_INFO_CATEGORY]]
-                #
-                # file_name = os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'upsell_one.csv')
-                # if os.path.exists(file_name):
-                #     upsell_one_df = pd.read_csv(file_name)
-                #     final_upsell_one_df = pd.concat([upsell_one_df, data4])
-                #     final_upsell_one_df.to_csv(file_name, header=True,
-                #                                index=False)
-                #
-                # else:
-                #
-                #     data4.to_csv(os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'upsell_one.csv'),
-                #                  header=True,
-                #                  index=False)
-                # print("outputed 1 upsell anticident ")
-                # ---------------------ipo venda -----------------------------------------#
+            # ---------------------ipo venda -----------------------------------------#
+            # data2 = data1[data1['is_upsell'] == is_upsell]
+            # print('here1')
+            # data3 = data2.drop_duplicates(subset=['consequents1'])
+            # data3['antecedent_one'] = data3['antecedents1'].apply(lambda x: list(eval(x))[0])
+            # print('here2')
+            # data3['consequents1'] = data3['consequents1'].apply(lambda x: list(eval(x))[0])
+            # print('here3')
+            # data3 = data3.merge(
+            #     self.pack_info[f.Features.ALL_PACK_FEATURES].add_prefix(
+            #         "ANTECEDENT_"),
+            #     left_on='antecedent_one', right_on="ANTECEDENT_" + f.Features.PACK_INFO_PACK_COLUMN_NAME,
+            #     how='left')
+            # data3 = data3.merge(
+            #     self.pack_info[f.Features.ALL_PACK_FEATURES].add_prefix(
+            #         "CONSEQUENT_"),
+            #     left_on='consequents1', right_on='CONSEQUENT_' + f.Features.PACK_INFO_PACK_COLUMN_NAME, how='left')
+            # # data3.drop(
+            # #     ['antecedent_one', 'consequents1', 'service', 'antecedent support', 'consequent support', 'lift'],
+            # #     axis=1, inplace=True)
+            # data4 = data3[data3['ANTECEDENT_' + f.Features.PACK_INFO_CATEGORY] == data3[
+            #     'CONSEQUENT_' + f.Features.PACK_INFO_CATEGORY]]
+            #
+            # file_name = os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'upsell_one.csv')
+            # if os.path.exists(file_name):
+            #     upsell_one_df = pd.read_csv(file_name)
+            #     final_upsell_one_df = pd.concat([upsell_one_df, data4])
+            #     final_upsell_one_df.to_csv(file_name, header=True,
+            #                                index=False)
+            #
+            # else:
+            #
+            #     data4.to_csv(os.path.join(cfg.Config.pack_info_location, self.dag_run_id, 'upsell_one.csv'),
+            #                  header=True,
+            #                  index=False)
+            # print("outputed 1 upsell anticident ")
+            # ---------------------ipo venda -----------------------------------------#
 
             elif anticendent_number == 2:
                 print("inside antecedent 2 ")
@@ -683,7 +736,7 @@ class UpsellCrossell(object):
                     return None
                 data = df.sort_values(by='confidence', ascending=False)
                 print(len(data.drop_duplicates(subset=['consequents1'])))
-                print("data.columns inside antecedent 2  is ",data.columns)
+                print("data.columns inside antecedent 2  is ", data.columns)
                 data1 = data.apply(self.check_upsell, anticendent_number=2, axis=1)
                 # ------------------------adding to db -------------------------------#
                 for index, row in data1.iterrows():
@@ -695,7 +748,7 @@ class UpsellCrossell(object):
                     info.support = round(float(row['support']), 2)
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
-                    print("row['conci'] is ",row['conci'])
+                    print("row['conci'] is ", row['conci'])
                     info.recommended_pack = str(row['conci'])
                     info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
                     info.number_of_current_packs = int(row['antecedents_length'])
@@ -706,7 +759,7 @@ class UpsellCrossell(object):
 
                     AssociationRepo.create(db=self.db, info=info)
                 # ------------------------adding to db -------------------------------#
-
+                self.insert_segementinfo(segements, anticendent_number, data1, "upsell")
                 # ---------------------ipo venda -----------------------------------------#
                 # data2 = data1[data1['is_upsell'] == 1]
                 # data3 = data2.drop_duplicates(subset=['consequents1'])
@@ -752,7 +805,7 @@ class UpsellCrossell(object):
 
                 data = df.sort_values(by='confidence', ascending=False)
                 print(len(data.drop_duplicates(subset=['consequents1'])))
-                print("data.columns inside antecedent 3 is ",data.columns)
+                print("data.columns inside antecedent 3 is ", data.columns)
                 data1 = data.apply(self.check_upsell, anticendent_number=3, axis=1)
                 # ------------------------adding to db -------------------------------#
                 for index, row in data1.iterrows():
@@ -764,7 +817,7 @@ class UpsellCrossell(object):
                     info.support = round(float(row['support']), 2)
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
-                    print("row['conci'] is ",row['conci'])
+                    print("row['conci'] is ", row['conci'])
                     info.recommended_pack = str(row['conci'])
                     info.segement_name = f"{segement_name}_{str(int(cluster_number))}"
                     info.number_of_current_packs = int(row['antecedents_length'])
@@ -775,8 +828,10 @@ class UpsellCrossell(object):
 
                     AssociationRepo.create(db=self.db, info=info)
                 # ------------------------adding to db -------------------------------#
+                self.insert_segementinfo(segements, anticendent_number, data1, "upsell")
 
-                # ---------------------ipo venda -----------------------------------------#
+            SegementRepo.deleteById(self.db, [segements.id])
+            # ---------------------ipo venda -----------------------------------------#
             #     data2 = data1[data1['is_upsell'] == 1]
             #     data3 = data2.drop_duplicates(subset=['consequents1'])
             #     data3['antecedents_one'] = data3['antecedents1'].apply(lambda x: list(eval(x))[0])
@@ -837,12 +892,11 @@ class UpsellCrossell(object):
 
         anti = None
         conci = None
-        print('x is' ,x)
-        print("x['consequents1'] is" ,x['consequents1'])
-        print("anticendent_number is" ,anticendent_number)
+        print('x is', x)
+        print("x['consequents1'] is", x['consequents1'])
+        print("anticendent_number is", anticendent_number)
         x['is_upsell'] = 1
         x['upsell_case'] = "correct_upsell"
-
 
         try:
             conci = list(eval(x['consequents1']))[0]
@@ -878,6 +932,57 @@ class UpsellCrossell(object):
         segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, segement_name=segement_name,
                                                                   cluster_number=cluster_number)
         pass
+
+    def insert_segementinfo(self, segements, anticendent_number, data1, type_of_service):
+        if data1 is None or len(data1) == 0:
+            ic(f"the segement {segements.segment_name} has no upsell 1 data1 ")
+            return
+        if type_of_service == "upsell":
+            data1 = data1[data1['is_upsell'] == 1]
+            if data1 is None or len(data1) == 0:
+                ic(f"the segement {segements.segment_name}  has no upsell 1")
+                return
+        data2 = data1.sort_values(by='confidence', ascending=False)
+        data2 = data2.head(5)
+        segments_list = []
+        for index, row in data2.iterrows():
+            info = schemas.SegementInfo()
+            info.segment_name = segements.segment_name
+            info.dag_run_id = self.dag_run_id
+            info.current_product = str(row['antecedents1'])
+            info.current_products_names = str(row['antecedents1'])
+            # if anticendent_number == 1:
+            #     info.current_products_names = str(row['antecedents1'])
+            # elif anticendent_number == 2:
+            #     info.current_products_names = str(row['antecedents1']) + str(row['antecedents2'])
+            # else:
+            #     info.current_products_names = str(row['antecedents1']) + str(row['antecedents2']) + str(
+            #         row['antecedents3'])
+            info.recommended_product_id = str(row['conci'])
+            info.recommended_product_name = str(row['conci'])
+            info.predicted_arpu = None
+            info.current_arpu = None
+            info.segment_length = segements.segment_length
+            info.rule = None
+            info.actual_rule = None
+            info.uplift = None
+            info.incremental_revenue = None
+            info.campaign_type = type_of_service
+            info.campaign_name = None
+            info.action_key = None
+            info.robox_id = None
+            info.samples = segements.samples
+            info.segment_name = segements.segment_name
+            info.current_ARPU_band = None
+            info.current_revenue_impact = None
+            info.customer_status = segements.customer_status
+            info.query = segements.query
+            info.cluster_no = segements.cluster_no
+            info.confidence = round(float(row['confidence']), 2)
+            segments_list.append(info)
+
+        for segment in segments_list:
+            SegementRepo.create(self.db, segment)
 
 
 def extract_rules(df, features):
@@ -937,7 +1042,7 @@ class RuleExtreaction(object):
     def filter_dict(self):
         # needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
         # self.filtered_dict = {k: v for k, v in self.data.items() if k in needed_segements}
-        self.filtered_dict = {k: v for k, v in self.data.items() }
+        self.filtered_dict = {k: v for k, v in self.data.items()}
 
     def execute(self):
         for item, val in self.filtered_dict.items():

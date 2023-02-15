@@ -17,6 +17,7 @@ import dask.array as da
 import configuration.config as cfg
 import configuration.features as f
 from pathlib import Path
+from icecream import ic
 import  traceback
 generic_dict = {"numerical_col": "Revenue"}
 config = cfg.Config().to_json()
@@ -442,6 +443,8 @@ def rfm_process_quantile_method(dag_run_id):
         Path(path).mkdir(parents=True, exist_ok=True)
         print(path)
         ctm_class.to_parquet(path)
+
+        ic("rfm segement value counts", ctm_class['Segment'].value_counts().compute())
         print("done with rfm outputing the file done ")
 
     except Exception as e:

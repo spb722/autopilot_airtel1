@@ -201,7 +201,19 @@ def usage_process(dag_run_id):
         for month in cfg.Config.usage_no_months:
             data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("usage").get(month)),
                                       dtype=f.Features.CUSTOMER_DTYPES)
+
+        ic("the length of m1 in usage ", len(data['m1']))
+        ic("the length of m2 in usage ", len(data['m2']))
+        ic("the length of m3 in usage ", len(data['m3']))
+        ic("the length of unique msisdn m3 in usage ", data['m1']['msisdn'].nunique().compute())
+        ic("the length of unique msisdn m3 in usage ", data['m2'
+                                                            '']['msisdn'].nunique().compute())
+        ic("the length of unique msisdn m3 in usage ", data['m3']['msisdn'].nunique().compute())
+
         trend_df = arpu_trend(data)
+
+        ic("the trend value counts is ", trend_df['trend'].value_counts().compute())
+
         path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend")
         Path(path).mkdir(parents=True, exist_ok=True)
         trend_df.to_parquet(path)
@@ -273,6 +285,14 @@ def recharge_process(dag_run_id):
             data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("recharge").get(month)),
                                       dtype=f.Features.RECHARGE_DTYPES)
 
+        ic("the length of m1 in recharge ", len(data['m1']))
+        ic("the length of m2 in recharge ", len(data['m2']))
+        ic("the length of m3 in recharge ", len(data['m3']))
+
+        ic("the length of unique msisdn m3 in recharge ", data['m1']['msisdn'].nunique().compute())
+        ic("the length of unique msisdn m3 in recharge ", data['m2']['msisdn'].nunique().compute())
+        ic("the length of unique msisdn m3 in recharge ", data['m3']['msisdn'].nunique().compute())
+
         rb = RechargeBanding(data)
         print("recharge categorizing ongoing ")
         df = rb.categorize()
@@ -342,6 +362,13 @@ def purchase_process(dag_run_id):
             data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("purchase").get(month)),
                                       dtype=f.Features.TRANSACTION_DTYPES)
 
+        ic("the length of m1 in purchase ", len(data['m1']))
+        ic("the length of m2 in purchase ", len(data['m2']))
+        ic("the length of m3 in purchase ", len(data['m3']))
+
+        ic("the length of unique msisdn m3 in purchase ", data['m1']['msisdn'].nunique().compute())
+        ic("the length of unique msisdn m3 in purchase ", data['m2']['msisdn'].nunique().compute())
+        ic("the length of unique msisdn m3 in purchase ", data['m3']['msisdn'].nunique().compute())
         rb = purchaseBanding(data)
         print("purchase categorizing ongoing ")
         df = rb.categorize()
@@ -359,7 +386,17 @@ def purchase_process(dag_run_id):
 
 def status_process(dag_run_id):
     try:
-        print("passing active in active ")
+        trend_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend")
+        trend_filtered_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend_filtered")
+        trend = dd.read_parquet(trend_path)
+        trend_filter = trend.query("tot_revm1 > 0 and tot_revm2 > 0 and tot_revm1 >0 ")
+        trend_filter.to_parquet(trend_filtered_path)
+        ic("the length of trend df ", len(trend))
+        ic("the unique msisdn in trend df ", trend['msisdn'].nunique().compute())
+
+        ic("the length of trend df  after all 3 months active ", len(trend_filter))
+        ic("the unique msisdn in trend df  all 3 months active ", trend_filter['msisdn'].nunique().compute())
+
         pass
     except Exception as e:
         print(e)
@@ -447,8 +484,21 @@ def segementation(dag_run_id):
 
         recharge_trend = recharge.join(trend, on='msisdn', how="inner")
         recharge_trend_usage = recharge_trend.join(usage, on='msisdn', how="inner")
+        ic("mergeing rechare and trend ", recharge_trend_usage['msisdn'].nunique())
+
         recharge_trend_usage_rfm = recharge_trend_usage.join(rfm, on='msisdn', how="inner")
+
+        ic("mergeing rechare and trend  and rfm ", recharge_trend_usage_rfm['msisdn'].nunique())
+
         recharge_trend_usage_rfm_pur = recharge_trend_usage_rfm.join(purchase, on='msisdn', how="inner")
+
+        ic("mergeing rechare and trend  and rfm  purchase", recharge_trend_usage_rfm_pur['msisdn'].nunique())
+
+        recharge_trend_usage_rfm_pur.export_csv(
+            os.path.join(cfg.Config.ml_location, "recharge_trend_usage_rfm_pur.csv"))
+
+        df = recharge_trend_usage_rfm_pur.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
+        df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
 
         segment_data(recharge_trend_usage_rfm_pur, dag_run_id)
     except Exception as e:
