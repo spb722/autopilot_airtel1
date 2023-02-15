@@ -311,6 +311,8 @@ def association_process(dag_run_id, db):
                 if uc.df_cross_df is not None and len(uc.df_cross_df) > 0:
                     uc.find_crossell(segement_name=item, cluster_number=cluster)
                 print("outputed crosssell files ")
+                if uc.df_upsell_df is None or len(uc.df_upsell_df) == 0:
+                    continue
                 for number in [1, 2, 3]:
                     print('going to find upsell for number', number)
                     uc.find_upsell(type_service='upsell', anticendent_number=number, segement_name=item,
@@ -380,9 +382,9 @@ class UpsellCrossell(object):
         try:
             self.associations_df = self.associations_df[self.associations_df['consequents_length'] == 1]
             df = self.associations_df.apply(self.determine_service, axis=1)
-
-            for type_info in self.exclude_types:
-                df = df[~df['type_service'].str.contains(type_info)]
+            if len(df) == 0:
+                return
+            for type_info in self.exclude_types:                df = df[~df['type_service'].str.contains(type_info)]
 
             self.df_upsell_df = df[df['service'] == 'upsell']
             self.df_cross_df = df[df['service'] != 'upsell']
@@ -458,7 +460,7 @@ class UpsellCrossell(object):
             if len(df) > 0:
                 df = df.sort_values(by="confidence", ascending=False)
                 segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
-                                                                          segement_name=f"{segement_name}_{str(int(cluster_number))}",
+                                                                          segement_name=f"{segement_name}|{str(int(cluster_number))}",
                                                                           cluster_number=int(cluster_number))
 
                 self.insert_segementinfo(segements, 1, df, "crossell")
@@ -607,7 +609,7 @@ class UpsellCrossell(object):
                 is_upsell = 0
 
             segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
-                                                                      segement_name=f"{segement_name}_{str(int(cluster_number))}",
+                                                                      segement_name=f"{segement_name}|{str(int(cluster_number))}",
                                                                       cluster_number=int(cluster_number))
 
             if anticendent_number == 1:
@@ -633,7 +635,7 @@ class UpsellCrossell(object):
                     print("row['conci'] is ", row['conci'])
                     info.recommended_pack = str(row['conci'])
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack ="|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
@@ -950,7 +952,7 @@ class UpsellCrossell(object):
             info.segment_name = segements.segment_name
             info.dag_run_id = self.dag_run_id
             info.current_product = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
-            info.current_products_names ="|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+            info.current_products_names = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
             # if anticendent_number == 1:
             #     info.current_products_names = str(row['antecedents1'])
             # elif anticendent_number == 2:
@@ -1063,7 +1065,10 @@ class RuleExtreaction(object):
                     info.customer_status = "active"
                     info.query = rule
                     info.cluster_no = int(cluster)
-                    info.samples = len(df.query(rule))
+                    if len(rule) > 1:
+                        info.samples = len(df.query(rule))
+                    else:
+                        info.samples = 0
                     SegementRepo.create(db=self.db, segement=info)
                 except Exception as e:
                     print(" error occorured in rule insertion ")
