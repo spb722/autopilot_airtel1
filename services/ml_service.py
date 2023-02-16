@@ -462,7 +462,8 @@ class UpsellCrossell(object):
                 segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
                                                                           segement_name=f"{segement_name}|{str(int(cluster_number))}",
                                                                           cluster_number=int(cluster_number))
-
+                if segements is None:
+                    return
                 self.insert_segementinfo(segements, 1, df, "crossell")
                 SegementRepo.deleteById(self.db, [segements.id])
                 # confidence = int(df.head(1)['confidence'].values[0] * 100)
@@ -611,7 +612,8 @@ class UpsellCrossell(object):
             segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
                                                                       segement_name=f"{segement_name}|{str(int(cluster_number))}",
                                                                       cluster_number=int(cluster_number))
-
+            if segements is None:
+                return
             if anticendent_number == 1:
                 print("inside antecedent 1 ")
                 df = self.df_upsell_df[self.df_upsell_df['antecedents_length'] == 1]
