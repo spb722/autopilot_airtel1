@@ -75,18 +75,26 @@ def k_modes(dag_run_id):
     try:
 
         path_d = os.path.join(cfg.Config.ml_location, dag_run_id, "dict.pickle")
+        path_dd = os.path.join(cfg.Config.ml_location, dag_run_id, "cluster_analysis.csv")
         with open(path_d, 'rb') as handle:
             data = pickle.load(handle)
 
         # needed_segements = ["Uptrend_Champions", "Uptrend_Loyal_Customers"]
         # filtered_dict = {k: v for k, v in data.items() if k in needed_segements}
         filtered_dict = {k: v for k, v in data.items()}
+        data_list = []
 
         for item, val in filtered_dict.items():
             # val is the path item is the segment name
             df = pd.read_csv(val)
             print(f"the cluster is {item}")
             val = perform_k_modes(df, val, dag_run_id)
+            val['segement_name'] = item
+            data_list.append(val)
+
+        df_final = pd.concat(data_list)
+        df_final = df_final.groupby(['segement_name', 'label']).agg({"msisdn": "count"})
+        df_final.to_csv(path_dd)
 
 
     except Exception as e:
@@ -297,12 +305,14 @@ def association_process(dag_run_id, db):
         # filtered_data__dict = {k: v for k, v in data_dict.items() if k in needed_segements}
         filtered_dict = {k: v for k, v in data.items()}
         filtered_data__dict = {k: v for k, v in data_dict.items()}
+
         for item, val in filtered_dict.items():
             data = pd.read_csv(filtered_data__dict.get(item))
             purchase = pd.read_csv(val)
             for cluster in data['label'].unique():
                 data_temp = data[data['label'] == cluster]
                 purchase_filtered = purchase[purchase[msisdn_name].isin(data_temp[msisdn_name])]
+
                 print('len of purchase in association_process ', len(purchase_filtered))
                 fp = Fpgrowth(purchase_filtered, dag_run_id, item=item)
                 print('Fpgrowth completed')

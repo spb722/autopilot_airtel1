@@ -421,12 +421,12 @@ def segment_data(recharge_trend_usage_rfm, dag_run_id):
                 temp = recharge_trend_usage_rfm[
                     (recharge_trend_usage_rfm['trend'] == trend) & (recharge_trend_usage_rfm['Segment'] == segement)]
 
-                name = f"{trend}_{segement}"
+                name = f"{trend}|{segement}"
                 file_name = f"{name}.csv"
                 print(' file_name is ', file_name)
 
                 length = len(temp)
-                if length > 1000:
+                if length > 0:
                     path = os.path.join(cfg.Config.ml_location, dag_run_id, file_name)
                     print(f"the length is suff {length} file name {name} ")
                     # print('path_dict before is' ,path_dict)
@@ -517,9 +517,12 @@ def segementation(dag_run_id):
         # df = recharge_trend_usage_rfm_pur.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
         # df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
         # ------------------------inner join logic  end-------------------------------#
+        df = trend_rfm_recharge_usage_purchase.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
+        df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
 
         segment_data(trend_rfm_recharge_usage_purchase, dag_run_id)
     except Exception as e:
         print(e)
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail="error occoureds in status_process" + str(e))
     return schemas.BaseResponse(statusCode=200, message="success", status="success")
