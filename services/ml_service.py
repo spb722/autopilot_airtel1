@@ -3,6 +3,7 @@
 # @Time:        12-01-2023 15:52
 # @Email:       spb722@gmail.com
 import pandas as pd
+import json
 from icecream import ic
 import dask.dataframe as dd
 import os
@@ -17,7 +18,8 @@ import pickle
 from mlxtend.frequent_patterns import fpgrowth, association_rules
 from pathlib import Path
 from sql_app.repositories import AssociationRepo
-
+import services.rule_serive as rls
+import requests
 config = cfg.Config().to_json()
 features = f.Features().to_json()
 import sql_app.schemas as schemas
@@ -351,6 +353,7 @@ class UpsellCrossell(object):
     def __init__(self, consequents_length=1, exclude_types=None,
                  dag_run_id=None, db=None, pack_info=None,
                  result=None, cluster_number=None, segement_name=None):
+        self.segement_name_list = None
         if exclude_types is None:
             exclude_types = ['SMS']
         self.dag_run_id = dag_run_id
@@ -464,13 +467,16 @@ class UpsellCrossell(object):
 
     def find_crossell(self, segement_name, cluster_number):
         try:
+            segement_name = f"{segement_name}-{str(int(cluster_number))}"
+            #self.segement_name_list = segement_name.split("|")
+
             print("self.df_cross_df is ", self.df_cross_df)
             df = self.df_cross_df.apply(self.cross_sell_parser, axis=1)
 
             if len(df) > 0:
                 df = df.sort_values(by="confidence", ascending=False)
                 segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
-                                                                          segement_name=f"{segement_name}|{str(int(cluster_number))}",
+                                                                          segement_name=segement_name,
                                                                           cluster_number=int(cluster_number))
                 if segements is None:
                     return
@@ -620,7 +626,7 @@ class UpsellCrossell(object):
                 is_upsell = 0
 
             segements = SegementRepo.findByAutoPilotIdAndSegementName(self.db, _id=self.dag_run_id,
-                                                                      segement_name=f"{segement_name}|{str(int(cluster_number))}",
+                                                                      segement_name=f"{segement_name}-{str(int(cluster_number))}",
                                                                       cluster_number=int(cluster_number))
             if segements is None:
                 return
@@ -960,6 +966,7 @@ class UpsellCrossell(object):
         data2 = data2.head(5)
         segments_list = []
         for index, row in data2.iterrows():
+            rls.get_rule_query(segements)
             info = schemas.SegementInfo()
             info.segment_name = segements.segment_name
             info.dag_run_id = self.dag_run_id
@@ -1072,7 +1079,7 @@ class RuleExtreaction(object):
                     info = schemas.SegementInfo()
                     # info.actual_rule
                     info.dag_run_id = self.dag_run_id
-                    info.segment_name = f"{item}|{str(cluster)}"
+                    info.segment_name = f"{item}-{str(cluster)}"
                     info.segment_length = str(len(df))
                     info.customer_status = "active"
                     info.query = rule
@@ -1128,4 +1135,213 @@ def rule_extraction(dag_run_id, db):
         print(e)
         traceback.print_exc()
         raise HTTPException(status_code=400, detail="error occoured rule_extraction" + str(e))
+    return schemas.BaseResponse(statusCode=200, message="success", status="success")
+
+
+def otliner_removal(df, per=0.97):
+    try:
+        # df = df["needed_col"]
+        q = df['tot_rev'].quantile(per)
+        print("the length brfore is", len(df))
+        df = df[df['tot_rev'] < q]
+        print("the length after is", len(df))
+        return df
+    except Exception as e:
+        print(e)
+        raise RuntimeError(e)
+
+
+def form_data(p2, df, anti_conci):
+    try:
+        product_id = f.Features.PACK_INFO_PACK_COLUMN_NAME
+        purchase = p2[p2[product_id].isin(anti_conci)]
+        pgp = purchase.copy()
+        #pgp = purchase.groupby(['msisdn', 'product_id']).agg({f.Features.PA: "sum"}).reset_index()
+
+        anti_df = pgp[pgp[product_id].isin(anti_conci[:-1])]
+        conci_df = pgp[pgp[product_id] == anti_conci[-1]]
+
+        anti_df_msisdn = anti_df[~anti_df['msisdn'].isin(conci_df['msisdn'].values)]['msisdn'].unique()
+        conci_df_msisdn = conci_df[~conci_df['msisdn'].isin(anti_df['msisdn'].values)]['msisdn'].unique()
+        anti_data = df[df['msisdn'].isin(anti_df_msisdn)]
+        conci_data = df[df['msisdn'].isin(conci_df_msisdn)]
+        print(f"the length of anti data ios {len(anti_data)} and unique is {anti_data['msisdn'].nunique()}")
+        print(f"the length of conci data ios {len(conci_data)} and unique is {conci_data['msisdn'].nunique()}")
+        anti_data['label'] = 1
+        conci_data['label'] = 0
+        data = pd.concat([anti_data, conci_data], axis=0)
+        print("label counts", data['label'].value_counts())
+        return data
+    except Exception as e:
+        print("the error occoured in form_data", e)
+        raise ValueError(e)
+
+
+def generate_boundries(features, data_json, tree):
+    def add_conditions(feature, count):
+        rule_json = {}
+        rule_json['id'] = -1
+
+        min_max = data_json.get(feature)
+        if min_max.get('min') == 0:
+            rule = f"{feature} <= {round(float(min_max.get('max')), 2)}"
+
+
+        else:
+            rule = f"{feature} between {round(float(min_max.get('min')), 2)} and {round(float(min_max.get('max')), 2)}"
+
+        rule_json['rule'] = rule
+        if count < len(features) - 1:
+            rule_json['left'] = add_conditions(features[count + 1], count + 1)
+        else:
+            rule_json['left'] = tree
+        return rule_json
+
+    try:
+        print("inside generate_boundries")
+        return add_conditions(features[0], 0)
+
+    except Exception as e:
+        print(f"error occoured in generating boundries {e}")
+
+
+def add_clusters_rules(features, features_val, tree):
+    def add_conditions(feature, count):
+        rule_json = {}
+        rule_json['id'] = -1
+        feature
+        rule = f"{features[count]} == {features_val[count]}"
+        rule_json['rule'] = rule
+        if count < len(features) - 1:
+            rule_json['left'] = add_conditions(features[count + 1], count + 1)
+        else:
+            rule_json['left'] = tree
+        return rule_json
+
+    try:
+        print("inside generate_boundries")
+        return add_conditions(features[0], 0)
+
+    except Exception as e:
+        print(f"error occoured in generating boundries {e}")
+
+
+def make_request(body):
+    rule_main = None
+    try:
+        url = cfg.Config.rule_converter_url
+        x = requests.post(url, json=body)
+        response_json = x.json()
+        if response_json.get('respCode') is None or response_json.get('respCode') != 'SUCCESS':
+            raise ValueError("rule engine gave error respose " + x.text)
+
+        return json.dumps(response_json.get('guiRequest'))
+
+
+    except Exception as e:
+        print("error occoured in http requerst", e)
+        raise RuntimeError(e)
+
+
+class RuleGenerator(object):
+    def __init__(self, df, dag_run_id, cluster_name, cluster_number, purchase_filtered):
+        self.df = df
+        self.dag_run_id = dag_run_id
+        self.cluster_name = cluster_name
+        self.cluster_name = cluster_number
+        self.purchase = purchase_filtered
+        pass
+
+    def generate_rules(self, segementss, usage):
+        segment_list = [ ]
+        for segements in segementss:
+            if segements.recommended_product_id is None:
+                continue
+            usage_filter = usage[usage['msisdn'].isin(self.df['msisdn'])]
+            usage_filter = usage_filter.compute()
+            conci = int(segements.recommended_product_id)
+            anti = [int(x) for x in segements.current_product.split("|")]
+            anti.append(conci)
+            df = form_data(p2=self.purchase, df=usage_filter, anti_conci=anti)
+            clf1, features = rls.train_model(df)
+            decision_tree_obj = rls.DecisionTreeConverter(clf1, features, ['differentpack', 'whatsappPack'],
+                                                          df[df['label'] == 1])
+            treetojson = decision_tree_obj.get_json()
+            print("tree fromed", treetojson)
+            prune_tree = rls.pruneTree(root=json.loads(treetojson), columns_for_dummies=[])
+            df_temp = df[df['label'] == 1]
+            df1 = df_temp.agg(['min', 'max'])
+            df_json = json.loads(df1.to_json())
+            prune_tree = generate_boundries(features, df_json, prune_tree)
+            segement_names = cfg.Config.segement_names
+            segement_values = segements.segment_name.split("-")[:-1]
+            prune_tree1 = add_clusters_rules(segement_names, segement_values, prune_tree)
+            segements.rule = json.dumps(prune_tree1)
+            #segements.rule = make_request(prune_tree1)
+            segment_list.append(segements)
+        return segment_list
+
+
+def rule_generation(dag_run_id, db):
+    try:
+
+        file_name_dict = cfg.get_file_names()
+        print("finding trend ongoing ")
+        data = {}
+        for month in cfg.Config.usage_no_months:
+            data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("usage").get(month)),
+                                      dtype=f.Features.CUSTOMER_DTYPES)
+        months = cfg.Config.usage_no_months
+        temp_df = None
+
+        for month in months:
+            df = data.get(month)
+            df = df.fillna(0)
+            total_revenue = f.Features.CUSTOMER_TOTAL_REVENUE[0]
+            df['tot_rev'] = df[total_revenue]
+            df = otliner_removal(df.copy())
+            df = df.add_prefix(f"{month}_")
+            df = df.rename(columns={f"{month}_msisdn": "msisdn"})
+            if temp_df is None:
+                temp_df = df
+            else:
+
+                temp_df = temp_df.merge(df, on='msisdn', how="left")
+                temp_df = temp_df.fillna(0)
+
+        result_dict_path = os.path.join(cfg.Config.ml_location, dag_run_id, "purchased_for_association", 'dict.pickle')
+        data_path = os.path.join(cfg.Config.ml_location, dag_run_id, "dict.pickle")
+        data_dict = load_picke_file(data_path)
+        pack_info = os.path.join(cfg.Config.etl_location, 'pack_info.csv')
+        pack_info_df = pd.read_csv(pack_info)
+        data = load_picke_file(result_dict_path)
+
+        filtered_dict = {k: v for k, v in data.items()}
+        filtered_data__dict = {k: v for k, v in data_dict.items()}
+
+        for item, val in filtered_dict.items():
+            data = pd.read_csv(filtered_data__dict.get(item))
+            purchase = pd.read_csv(val)
+            for cluster in data['label'].unique():
+                segements_name = f"{item}-{str(cluster)}"
+                data_temp = data[data['label'] == cluster]
+                purchase_filtered = purchase[purchase[msisdn_name].isin(data_temp[msisdn_name])]
+
+                print('len of purchase in association_process ', len(purchase_filtered))
+                rg = RuleGenerator(df=data, dag_run_id=dag_run_id, cluster_name=item, cluster_number=cluster,
+                                   purchase_filtered=purchase_filtered)
+                segements = SegementRepo.findByAutoPilotIdAndSegementNameAll(db=db,_id=dag_run_id, segement_name=segements_name,
+                                                                          cluster_number=int(cluster))
+                if segements is None:
+                    continue
+                segements_new = rg.generate_rules(segements, temp_df)
+                for seg in segements_new:
+                    if seg is not None:
+                        SegementRepo.update(db=db, item_data=seg)
+
+
+    except Exception as e:
+        print(e)
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail="error occoured rule_generation" + str(e))
     return schemas.BaseResponse(statusCode=200, message="success", status="success")

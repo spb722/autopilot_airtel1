@@ -38,6 +38,12 @@ class SegementRepo:
             .filter(models.SegmentInformation.segment_name == segement_name) \
             .filter(models.SegmentInformation.cluster_no == cluster_number).first()
 
+    def findByAutoPilotIdAndSegementNameAll(db: Session, _id, segement_name, cluster_number):
+        return db.query(models.SegmentInformation) \
+            .filter(models.SegmentInformation.dag_run_id == _id) \
+            .filter(models.SegmentInformation.segment_name == segement_name) \
+            .filter(models.SegmentInformation.cluster_no == cluster_number).all()
+
     def findByAutoPilotId(db: Session, _id):
         return db.query(models.SegmentInformation).filter(models.SegmentInformation.dag_run_id == _id).all()
 

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 import services.rfm_service as rfm
 import services.preprocess_service as ps
+
 import services.ml_service as ml
 import services.operations as op
 import dask
@@ -178,6 +179,18 @@ async def status_process(dag_run_id: Optional[str] = None, db: Session = Depends
     print("dag_run_id is ", dag_run_id)
 
     return ml.association_process(dag_run_id, db)
+
+
+@app.post('/rule_generation', tags=["auto_pilot"], response_model=schemas.BaseResponse, status_code=201)
+async def rule_generation(dag_run_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """
+    read the datas and preprocess it
+    """
+    dag_run_id = dag_run_id[0:27]
+
+    print("dag_run_id is ", dag_run_id)
+
+    return ml.rule_generation(dag_run_id, db)
 
 
 @app.post('/pre_process_one', tags=["auto_pilot"], response_model=schemas.BaseResponse, status_code=201)

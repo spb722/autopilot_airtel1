@@ -202,17 +202,17 @@ def usage_process(dag_run_id):
             data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("usage").get(month)),
                                       dtype=f.Features.CUSTOMER_DTYPES)
 
-        ic("the length of m1 in usage ", len(data['m1']))
-        ic("the length of m2 in usage ", len(data['m2']))
-        ic("the length of m3 in usage ", len(data['m3']))
-        ic("the length of unique msisdn m3 in usage ", data['m1']['msisdn'].nunique().compute())
-        ic("the length of unique msisdn m3 in usage ", data['m2'
-                                                            '']['msisdn'].nunique().compute())
-        ic("the length of unique msisdn m3 in usage ", data['m3']['msisdn'].nunique().compute())
+        # ic("the length of m1 in usage ", len(data['m1']))
+        # ic("the length of m2 in usage ", len(data['m2']))
+        # ic("the length of m3 in usage ", len(data['m3']))
+        # ic("the length of unique msisdn m3 in usage ", data['m1']['msisdn'].nunique().compute())
+        # ic("the length of unique msisdn m3 in usage ", data['m2'
+        #                                                     '']['msisdn'].nunique().compute())
+        # ic("the length of unique msisdn m3 in usage ", data['m3']['msisdn'].nunique().compute())
 
         trend_df = arpu_trend(data)
 
-        ic("the trend value counts is ", trend_df['trend'].value_counts().compute())
+        # ic("the trend value counts is ", trend_df['trend'].value_counts().compute())
 
         path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend")
         Path(path).mkdir(parents=True, exist_ok=True)
@@ -285,13 +285,13 @@ def recharge_process(dag_run_id):
             data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("recharge").get(month)),
                                       dtype=f.Features.RECHARGE_DTYPES)
 
-        ic("the length of m1 in recharge ", len(data['m1']))
-        ic("the length of m2 in recharge ", len(data['m2']))
-        ic("the length of m3 in recharge ", len(data['m3']))
-
-        ic("the length of unique msisdn m3 in recharge ", data['m1']['msisdn'].nunique().compute())
-        ic("the length of unique msisdn m3 in recharge ", data['m2']['msisdn'].nunique().compute())
-        ic("the length of unique msisdn m3 in recharge ", data['m3']['msisdn'].nunique().compute())
+        # ic("the length of m1 in recharge ", len(data['m1']))
+        # ic("the length of m2 in recharge ", len(data['m2']))
+        # ic("the length of m3 in recharge ", len(data['m3']))
+        #
+        # ic("the length of unique msisdn m3 in recharge ", data['m1']['msisdn'].nunique().compute())
+        # ic("the length of unique msisdn m3 in recharge ", data['m2']['msisdn'].nunique().compute())
+        # ic("the length of unique msisdn m3 in recharge ", data['m3']['msisdn'].nunique().compute())
 
         rb = RechargeBanding(data)
         print("recharge categorizing ongoing ")
@@ -362,13 +362,13 @@ def purchase_process(dag_run_id):
             data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("purchase").get(month)),
                                       dtype=f.Features.TRANSACTION_DTYPES)
 
-        ic("the length of m1 in purchase ", len(data['m1']))
-        ic("the length of m2 in purchase ", len(data['m2']))
-        ic("the length of m3 in purchase ", len(data['m3']))
-
-        ic("the length of unique msisdn m3 in purchase ", data['m1']['msisdn'].nunique().compute())
-        ic("the length of unique msisdn m3 in purchase ", data['m2']['msisdn'].nunique().compute())
-        ic("the length of unique msisdn m3 in purchase ", data['m3']['msisdn'].nunique().compute())
+        # ic("the length of m1 in purchase ", len(data['m1']))
+        # ic("the length of m2 in purchase ", len(data['m2']))
+        # ic("the length of m3 in purchase ", len(data['m3']))
+        #
+        # ic("the length of unique msisdn m3 in purchase ", data['m1']['msisdn'].nunique().compute())
+        # ic("the length of unique msisdn m3 in purchase ", data['m2']['msisdn'].nunique().compute())
+        # ic("the length of unique msisdn m3 in purchase ", data['m3']['msisdn'].nunique().compute())
         rb = purchaseBanding(data)
         print("purchase categorizing ongoing ")
         df = rb.categorize()
@@ -421,7 +421,8 @@ def segment_data(recharge_trend_usage_rfm, dag_run_id):
                 temp = recharge_trend_usage_rfm[
                     (recharge_trend_usage_rfm['trend'] == trend) & (recharge_trend_usage_rfm['Segment'] == segement)]
 
-                name = f"{trend}|{segement}"
+                name = f"{trend}-{segement}"
+                name = r"" + name
                 file_name = f"{name}.csv"
                 print(' file_name is ', file_name)
 
@@ -434,7 +435,7 @@ def segment_data(recharge_trend_usage_rfm, dag_run_id):
                     path_dict[str(name)] = str(path)
                     # print('path_dict after  is' ,path_dict)
 
-                    temp.export_csv(path)
+                    temp.export_csv(r"" + path)
                     print('file_exported')
 
                 else:
@@ -481,7 +482,7 @@ def segementation(dag_run_id):
         rfm = vaex.open(rfm_path)
         rfm = rfm[['msisdn', 'Segment']]
         print("loaded rfm")
-#------------nnew logic----------------#
+        # ------------nnew logic----------------#
         trend_rfm = trend.join(rfm, on='msisdn', how="inner")
         trend_rfm_recharge = trend_rfm.join(recharge, on='msisdn', how="left")
         trend_rfm_recharge['recharge_count_pattern_m1'] = trend_rfm_recharge['recharge_count_pattern_m1'].fillna("m1_0")
@@ -496,8 +497,8 @@ def segementation(dag_run_id):
         trend_rfm_recharge_usage_purchase['recharge_count_pattern_m3'] = trend_rfm_recharge_usage_purchase[
             'recharge_count_pattern_m3'].fillna("m3_0")
 
-# ------------nnew logic----------------#
-#------------------------inner join logic-------------------------------#
+        # ------------nnew logic----------------#
+        # ------------------------inner join logic-------------------------------#
 
         # recharge_trend = recharge.join(trend, on='msisdn', how="inner")
         # recharge_trend_usage = recharge_trend.join(usage, on='msisdn', how="inner")

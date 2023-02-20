@@ -444,7 +444,7 @@ def rfm_process_quantile_method(dag_run_id):
         print(path)
         ctm_class.to_parquet(path)
 
-        ic("rfm segement value counts", ctm_class['Segment'].value_counts().compute())
+        # ic("rfm segement value counts", ctm_class['Segment'].value_counts().compute())
         print("done with rfm outputing the file done ")
 
     except Exception as e:
