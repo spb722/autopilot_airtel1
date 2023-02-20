@@ -1258,7 +1258,7 @@ class RuleGenerator(object):
             if segements.recommended_product_id is None:
                 continue
             usage_filter1 = usage[usage['msisdn'].isin(self.df['msisdn'])]
-            usage_filter1 = usage_filter1.compute()
+            #usage_filter1 = usage_filter1.compute()
             conci = int(segements.recommended_product_id)
             anti = [int(x) for x in segements.current_product.split("|")]
             anti.append(conci)
@@ -1308,7 +1308,7 @@ def rule_generation(dag_run_id, db):
 
                 temp_df = temp_df.merge(df, on='msisdn', how="left")
                 temp_df = temp_df.fillna(0)
-
+        temp_df =temp_df.compute()
         result_dict_path = os.path.join(cfg.Config.ml_location, dag_run_id, "purchased_for_association", 'dict.pickle')
         data_path = os.path.join(cfg.Config.ml_location, dag_run_id, "dict.pickle")
         data_dict = load_picke_file(data_path)
