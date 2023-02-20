@@ -1257,12 +1257,12 @@ class RuleGenerator(object):
         for segements in segementss:
             if segements.recommended_product_id is None:
                 continue
-            usage_filter = usage[usage['msisdn'].isin(self.df['msisdn'])]
-            usage_filter = usage_filter.compute()
+            usage_filter1 = usage[usage['msisdn'].isin(self.df['msisdn'])]
+            usage_filter1 = usage_filter1.compute()
             conci = int(segements.recommended_product_id)
             anti = [int(x) for x in segements.current_product.split("|")]
             anti.append(conci)
-            df = form_data(p2=self.purchase, df=usage_filter, anti_conci=anti)
+            df = form_data(p2=self.purchase, df=usage_filter1, anti_conci=anti)
             clf1, features = rls.train_model(df)
             decision_tree_obj = rls.DecisionTreeConverter(clf1, features, ['differentpack', 'whatsappPack'],
                                                           df[df['label'] == 1])
