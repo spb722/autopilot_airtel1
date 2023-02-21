@@ -23,6 +23,7 @@ generic_dict = {"numerical_col": "Revenue"}
 config = cfg.Config().to_json()
 features = f.Features().to_json()
 
+#ic.configureOutput(outputFunction=lambda msg: cfg.append(msg, config.log_file))
 
 # ----------------------------------------------------------------------------------
 def standarScaling(df1, features, allFeatures=False):
@@ -289,6 +290,9 @@ def join_rfm(x):
 
 
 def perform_rfm(df_data_rfm, period=60):
+
+    ic("inside perform_rfm")
+
     df_data_rfm.purchase_date = dd.to_datetime(df_data_rfm.purchase_date)
     df_data_rfm = df_data_rfm.fillna(0)
     msisdn_name = f.Features.MSISDN_COL_NAME
@@ -444,7 +448,7 @@ def rfm_process_quantile_method(dag_run_id):
         print(path)
         ctm_class.to_parquet(path)
 
-        # ic("rfm segement value counts", ctm_class['Segment'].value_counts().compute())
+        ic("rfm segement value counts", ctm_class['Segment'].value_counts().compute())
         print("done with rfm outputing the file done ")
 
     except Exception as e:

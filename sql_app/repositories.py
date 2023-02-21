@@ -66,7 +66,9 @@ class AssociationRepo:
                                          confidence=info.confidence,
                                          number_of_current_packs=info.number_of_current_packs,
                                          support=info.support, recommended_pack=info.recommended_pack,
-                                         segement_name=info.segement_name
+                                         segement_name=info.segement_name,
+                                         recommended_pack_id=info.recommended_pack_id,
+                                         current_pack_ids=info.current_pack_ids
                                          )
         db.add(db_item)
         db.commit()

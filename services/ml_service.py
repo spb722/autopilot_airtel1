@@ -194,6 +194,10 @@ def matrix_filter(dag_run_id):
                     purchase_filter[f.Features.TRANSACTION_PRODUCT_NAME] == product]
                 # read the mathix
                 product = str(product)
+                matrix_check = pd.read_csv(matrix_addon_path,nrows=2)
+                if product not in  matrix_check.columns:
+                        continue
+
                 matrix = dd.read_csv(matrix_addon_path, usecols=[f.Features.MSISDN_COL_NAME, product])
                 purchase_filter1 = purchase_filter_one_product.merge(matrix, on=msisdn_name, how='inner')
                 purchase_filter2 = purchase_filter1[purchase_filter1[product] > cfg.Config.threshold]
@@ -240,6 +244,8 @@ class Fpgrowth(object):
         status, msg = self.form_associations()
         print(msg)
 
+        if not status:
+            return None
         self.process_association()
 
         self.results_processed.to_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "association.csv"), header=True,
@@ -266,10 +272,11 @@ class Fpgrowth(object):
         frequent_itemsets = fpgrowth(basket_sets_filter, min_support=0.03, use_colnames=True)
         print('frequent_itemsets created')
         print('len of frequent_itemsets ', len(frequent_itemsets))
-        frequent_itemsets['length'] = frequent_itemsets['itemsets'].apply(lambda x: len(x))
         if frequent_itemsets is None or len(frequent_itemsets) == 0:
             # retun none so that the next cluster
-            return None
+            return False, "the result does not have any lenth the lenfth is " + str(len(frequent_itemsets))
+        frequent_itemsets['length'] = frequent_itemsets['itemsets'].apply(lambda x: len(x))
+
         self.frequent_itemsets = frequent_itemsets[(frequent_itemsets['length'] >= self.item_set_min_length) & (
                 frequent_itemsets['length'] <= self.item_set_max_length)]
         print('frequent_itemsets filtered')
@@ -285,6 +292,7 @@ class Fpgrowth(object):
         return False, "the result does not have any lenth the lenfth is " + str(len(self.results))
 
     def process_association(self):
+        print(' inside process_association')
         results = self.results
         results['antecedents_length'] = results['antecedents'].apply(lambda x: len(x))
         results['consequents_length'] = results['consequents'].apply(lambda x: len(x))
@@ -320,9 +328,15 @@ def association_process(dag_run_id, db):
 
                 print('len of purchase in association_process ', len(purchase_filtered))
                 fp = Fpgrowth(purchase_filtered, dag_run_id, item=item)
+                print( 'fp.results is ',fp.results)
+                if fp.results is None or len(fp.results)==0:
+                    print('skipped this iteration')
+                    continue
                 print('Fpgrowth completed')
                 uc = UpsellCrossell(dag_run_id=dag_run_id, pack_info=pack_info_df, result=fp.results, db=db)
                 uc.determine_service_type()
+                if len(uc.associations_df)<=2:
+                    continue
                 if uc.df_cross_df is not None and len(uc.df_cross_df) > 0:
                     uc.find_crossell(segement_name=item, cluster_number=cluster)
                 print("outputed crosssell files ")
@@ -351,6 +365,23 @@ def encode_units(x):
     if x >= 1:
         return 1
 
+def getpackname(product_id, packinfo_df):
+    product_name = "No product name"
+    try:
+        if (packinfo_df is not None):
+            if (product_id in packinfo_df['product_id'].values):
+
+                product_name = str(packinfo_df[packinfo_df['product_id'] == product_id].iloc[0]["product_name"])
+                print("the product name of ", product_id, " is ", product_name)
+            else:
+                print("product_id is not in dataframe  ")
+        else:
+            print("some problem with the  dataframe  ")
+
+    except Exception as e:
+        print("error occurred in getpackname ", e)
+
+    return product_name
 
 class UpsellCrossell(object):
     def __init__(self, consequents_length=1, exclude_types=None,
@@ -396,11 +427,16 @@ class UpsellCrossell(object):
 
     def determine_service_type(self):
         try:
+            print('self.associations_df is ',self.associations_df)
+            print('self.associations_df.columns is ',self.associations_df.columns)
+            if len(self.associations_df)<=2:
+                return
             self.associations_df = self.associations_df[self.associations_df['consequents_length'] == 1]
             df = self.associations_df.apply(self.determine_service, axis=1)
             if len(df) == 0:
                 return
-            for type_info in self.exclude_types:                df = df[~df['type_service'].str.contains(type_info)]
+            for type_info in self.exclude_types:
+                df = df[~df['type_service'].str.contains(type_info)]
 
             self.df_upsell_df = df[df['service'] == 'upsell']
             self.df_cross_df = df[df['service'] != 'upsell']
@@ -413,7 +449,7 @@ class UpsellCrossell(object):
     def determine_service(self, x):
         print('x is', x)
 
-        group_type = f.Features.PACK_INFO_CATEGORY
+        group_type = f.Features.PACK_INFO_SUB_CATEGORY
 
         def get_pack_type(pack_name):
             type_pack = None
@@ -512,10 +548,15 @@ class UpsellCrossell(object):
                 info.confidence = round(float(row['confidence']), 2)
                 info.lift = round(float(row['lift']), 2)
                 print("row['conci'] is ", row['conci'])
-                info.recommended_pack = str(row['conci'])
+
+                info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                info.recommended_pack_id = str(row['conci'])
+
                 info.number_of_current_packs = int(row['antecedents_length'])
-                info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
-                info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
+                info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+
+                info.segement_name = segements.segment_name
                 print("added crossel info to db")
                 AssociationRepo.create(db=self.db, info=info)
             # ------------------------adding to db -------------------------------#
@@ -654,10 +695,13 @@ class UpsellCrossell(object):
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
-                    info.recommended_pack = str(row['conci'])
+                    info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                    info.recommended_pack_id = str(row['conci'])
+
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
-                    info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
+                    info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+                    info.segement_name = segements.segment_name
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
@@ -772,10 +816,14 @@ class UpsellCrossell(object):
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
-                    info.recommended_pack = str(row['conci'])
-                    info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
+
+                    info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                    info.recommended_pack_id = str(row['conci'])
+
+                    info.segement_name = segements.segment_name
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
@@ -841,10 +889,14 @@ class UpsellCrossell(object):
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
-                    info.recommended_pack = str(row['conci'])
-                    info.segement_name = f"{segement_name}|{str(int(cluster_number))}"
+
+                    info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                    info.recommended_pack_id = str(row['conci'])
+
+                    info.segement_name = segements.segment_name
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
@@ -1212,7 +1264,7 @@ def add_clusters_rules(features, features_val, tree):
     def add_conditions(feature, count):
         rule_json = {}
         rule_json['id'] = -1
-        feature
+
         rule = f"{features[count]} == {features_val[count]}"
         rule_json['rule'] = rule
         if count < len(features) - 1:
@@ -1266,6 +1318,17 @@ class RuleGenerator(object):
             anti = [int(x) for x in segements.current_product.split("|")]
             anti.append(conci)
             df = form_data(p2=self.purchase, df=usage_filter1, anti_conci=anti)
+            value_counts = df['label'].value_counts()
+            if 0 in value_counts.index and 1 in value_counts.index:
+                if value_counts.loc[0] >= 100 and value_counts.loc[1] >= 100:
+                    print("Both values have at least two entries")
+                else:
+                    print("At least one value doesn't have two entries")
+                    continue
+            else:
+                print("Both values are not present in the column")
+                continue
+
             clf1, features = rls.train_model(df)
             decision_tree_obj = rls.DecisionTreeConverter(clf1, features, ['differentpack', 'whatsappPack'],
                                                           df[df['label'] == 1])

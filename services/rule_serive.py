@@ -279,3 +279,4 @@ def train_model(data):
 def get_rule_query(segements):
 
     return None
+

@@ -47,23 +47,27 @@ def matrix_operations(dag_run_id):
         traceback.print_exc()
         raise HTTPException(status_code=400, detail="error occoureds in read and process rfm" + str(e))
     return schemas.BaseResponse(statusCode=200, message="success", status="success")
+
+
 def matrix_operations_one(dag_run_id):
     try:
         matrix_pack_features = pd.read_csv(
             os.path.join(cfg.Config.ml_location, dag_run_id, "pack_features_encoded.csv"))
         matrix_user_pack = pd.read_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "user_pack_matrix.csv"))
-        pack_info = pd.read_csv(os.path.join(cfg.Config.pack_info_location, dag_run_id, "packinfo.csv"))
+        pack_info = pd.read_csv(os.path.join(cfg.Config.pack_info_location, "pack_info.csv"))
         l1 = list(pack_info[pack_info['type'] == 'addon']['product_id'].unique())
         # l2 = list(pack_info[pack_info['product_sub_type'] == 'Data_Standard']['product_id'].unique())
         l2 = [ ]
+        print('l1  is ',l1 )
+        print('type of l1[0]  is ',type(l1[0]) )
         needed_products = list(set(l1 + l2))
-        needed_products = [int(float(x)) for x in needed_products]
+        needed_products = [int(x) for x in needed_products]
         msisdn_list = matrix_user_pack.pop("msisdn")
         product_ids = matrix_user_pack.columns
-        product_ids = [int(float(x)) for x in product_ids]
-        filter_products = [str(float(x)) for x in needed_products if x in product_ids]
+        product_ids = [int(x) for x in product_ids]
+        filter_products = [str(x) for x in needed_products if x in product_ids]
         matrix_user_pack = matrix_user_pack[filter_products]
-        filter_products = [int(float(x)) for x in filter_products]
+        filter_products = [int(x) for x in filter_products]
         matrix_pack_features = matrix_pack_features[matrix_pack_features['product_id'].isin(filter_products)]
         product_id_ls = matrix_pack_features.pop("product_id")
         pack_features_cols = matrix_pack_features.columns
@@ -79,7 +83,7 @@ def matrix_operations_one(dag_run_id):
         final_matrix_1 = pd.DataFrame(final_matrix_1, index=msisdn_list, columns=product_id_ls)
         ic("got the final matrix ")
         final_matrix_1.to_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "propensity_matrix_addon.csv"), header=True,
-                            index=False)
+                            index=True)
     except Exception as e:
         ic(e)
         traceback.print_exc()
@@ -92,18 +96,18 @@ def matrix_operations_two(dag_run_id):
         matrix_pack_features = pd.read_csv(
             os.path.join(cfg.Config.ml_location, dag_run_id, "pack_features_encoded.csv"))
         matrix_user_pack = pd.read_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "user_pack_matrix.csv"))
-        pack_info = pd.read_csv(os.path.join(cfg.Config.pack_info_location, dag_run_id, "packinfo.csv"))
+        pack_info = pd.read_csv(os.path.join(cfg.Config.pack_info_location, "pack_info.csv"))
         l1 = list(pack_info[pack_info['type'] == 'basic']['product_id'].unique())
         # l2 = list(pack_info[pack_info['product_sub_type'] == 'Data_Standard']['product_id'].unique())
         l2 = []
         needed_products = list(set(l1 + l2))
-        needed_products = [int(float(x)) for x in needed_products]
+        needed_products = [int(x) for x in needed_products]
         msisdn_list = matrix_user_pack.pop("msisdn")
         product_ids = matrix_user_pack.columns
-        product_ids = [int(float(x)) for x in product_ids]
-        filter_products = [str(float(x)) for x in needed_products if x in product_ids]
+        product_ids = [int(x) for x in product_ids]
+        filter_products = [str(x) for x in needed_products if x in product_ids]
         matrix_user_pack = matrix_user_pack[filter_products]
-        filter_products = [int(float(x)) for x in filter_products]
+        filter_products = [int(x) for x in filter_products]
         matrix_pack_features = matrix_pack_features[matrix_pack_features['product_id'].isin(filter_products)]
         product_id_ls = matrix_pack_features.pop("product_id")
         pack_features_cols = matrix_pack_features.columns
@@ -119,7 +123,7 @@ def matrix_operations_two(dag_run_id):
         final_matrix_1 = pd.DataFrame(final_matrix_1, index=msisdn_list, columns=product_id_ls)
         ic("got the final matrix ")
         final_matrix_1.to_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "propensity_matrix_basic.csv"), header=True,
-                            index=False)
+                            index=True)
     except Exception as e:
         ic(e)
         traceback.print_exc()

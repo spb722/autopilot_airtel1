@@ -74,6 +74,7 @@ class Features:
     PACK_INFO_DTYPES = {'validity_in_days': 'int', 'unit_in_mb': 'float32'}
     ALL_PACK_FEATURES = PACK_CONTI_FEATURES + PACK_CATEG_FEATURES
     PACK_INFO_CATEGORY = 'product_type'
+    PACK_INFO_SUB_CATEGORY = 'bundle_type'
     PACK_INFO_PACK_COLUMN_NAME = 'product_id'
     PACK_INFO_PACK_PRICE_COLUMN_NAME = 'price'
     CUSTOMER_CATEG_FEATURES = []

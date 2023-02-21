@@ -18,8 +18,10 @@ class StatsCreate(Stats):
 class AssociationInfo(BaseModel):
     dag_run_id: Optional[str] = None
     current_pack: Optional[str] = None
+    current_pack_ids: Optional[str] = None
     number_of_current_packs: Optional[int] = None
     recommended_pack: Optional[str] = None
+    recommended_pack_id: Optional[str] = None
     support: Optional[float] = None
     lift: Optional[float] = None
     confidence: Optional[float] = None
