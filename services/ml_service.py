@@ -20,6 +20,7 @@ from pathlib import Path
 from sql_app.repositories import AssociationRepo
 import services.rule_serive as rls
 import requests
+
 config = cfg.Config().to_json()
 features = f.Features().to_json()
 import sql_app.schemas as schemas
@@ -167,6 +168,8 @@ def matrix_filter(dag_run_id):
         # read purchase information
         path = os.path.join(cfg.Config.ml_location, dag_run_id, "purchase_filtered")
         matrix_path = os.path.join(cfg.Config.ml_location, dag_run_id, "matrix.csv")
+        matrix_basic_path = os.path.join(cfg.Config.ml_location, dag_run_id, "propensity_matrix_basic.csv")
+        matrix_addon_path = os.path.join(cfg.Config.ml_location, dag_run_id, "propensity_matrix_addon.csv")
         purchase_filter_path = os.path.join(cfg.Config.ml_location, dag_run_id, "purchased_for_association")
 
         Path(purchase_filter_path).mkdir(parents=True, exist_ok=True)
@@ -191,7 +194,7 @@ def matrix_filter(dag_run_id):
                     purchase_filter[f.Features.TRANSACTION_PRODUCT_NAME] == product]
                 # read the mathix
                 product = str(product)
-                matrix = dd.read_csv(matrix_path, usecols=[f.Features.MSISDN_COL_NAME, product])
+                matrix = dd.read_csv(matrix_addon_path, usecols=[f.Features.MSISDN_COL_NAME, product])
                 purchase_filter1 = purchase_filter_one_product.merge(matrix, on=msisdn_name, how='inner')
                 purchase_filter2 = purchase_filter1[purchase_filter1[product] > cfg.Config.threshold]
                 purchase_filter2 = purchase_filter2.drop(columns=[product])
@@ -468,7 +471,7 @@ class UpsellCrossell(object):
     def find_crossell(self, segement_name, cluster_number):
         try:
             segement_name = f"{segement_name}-{str(int(cluster_number))}"
-            #self.segement_name_list = segement_name.split("|")
+            # self.segement_name_list = segement_name.split("|")
 
             print("self.df_cross_df is ", self.df_cross_df)
             df = self.df_cross_df.apply(self.cross_sell_parser, axis=1)
@@ -1156,7 +1159,7 @@ def form_data(p2, df, anti_conci):
         product_id = f.Features.PACK_INFO_PACK_COLUMN_NAME
         purchase = p2[p2[product_id].isin(anti_conci)]
         pgp = purchase.copy()
-        #pgp = purchase.groupby(['msisdn', 'product_id']).agg({f.Features.PA: "sum"}).reset_index()
+        # pgp = purchase.groupby(['msisdn', 'product_id']).agg({f.Features.PA: "sum"}).reset_index()
 
         anti_df = pgp[pgp[product_id].isin(anti_conci[:-1])]
         conci_df = pgp[pgp[product_id] == anti_conci[-1]]
@@ -1253,12 +1256,12 @@ class RuleGenerator(object):
         pass
 
     def generate_rules(self, segementss, usage):
-        segment_list = [ ]
+        segment_list = []
         for segements in segementss:
             if segements.recommended_product_id is None:
                 continue
             usage_filter1 = usage[usage['msisdn'].isin(self.df['msisdn'])]
-            #usage_filter1 = usage_filter1.compute()
+            # usage_filter1 = usage_filter1.compute()
             conci = int(segements.recommended_product_id)
             anti = [int(x) for x in segements.current_product.split("|")]
             anti.append(conci)
@@ -1277,7 +1280,7 @@ class RuleGenerator(object):
             segement_values = segements.segment_name.split("-")[:-1]
             prune_tree1 = add_clusters_rules(segement_names, segement_values, prune_tree)
             segements.rule = json.dumps(prune_tree1)
-            #segements.rule = make_request(prune_tree1)
+            # segements.rule = make_request(prune_tree1)
             segment_list.append(segements)
         return segment_list
 
@@ -1308,7 +1311,8 @@ def rule_generation(dag_run_id, db):
 
                 temp_df = temp_df.merge(df, on='msisdn', how="left")
                 temp_df = temp_df.fillna(0)
-        temp_df =temp_df.compute()
+        temp_df = temp_df.compute()
+
         result_dict_path = os.path.join(cfg.Config.ml_location, dag_run_id, "purchased_for_association", 'dict.pickle')
         data_path = os.path.join(cfg.Config.ml_location, dag_run_id, "dict.pickle")
         data_dict = load_picke_file(data_path)
@@ -1330,8 +1334,9 @@ def rule_generation(dag_run_id, db):
                 print('len of purchase in association_process ', len(purchase_filtered))
                 rg = RuleGenerator(df=data, dag_run_id=dag_run_id, cluster_name=item, cluster_number=cluster,
                                    purchase_filtered=purchase_filtered)
-                segements = SegementRepo.findByAutoPilotIdAndSegementNameAll(db=db,_id=dag_run_id, segement_name=segements_name,
-                                                                          cluster_number=int(cluster))
+                segements = SegementRepo.findByAutoPilotIdAndSegementNameAll(db=db, _id=dag_run_id,
+                                                                             segement_name=segements_name,
+                                                                             cluster_number=int(cluster))
                 if segements is None:
                     continue
                 segements_new = rg.generate_rules(segements, temp_df)
