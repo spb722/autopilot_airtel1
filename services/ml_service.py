@@ -194,11 +194,11 @@ def matrix_filter(dag_run_id):
                     purchase_filter[f.Features.TRANSACTION_PRODUCT_NAME] == product]
                 # read the mathix
                 product = str(product)
-                matrix_check = pd.read_csv(matrix_addon_path,nrows=2)
-                if product not in  matrix_check.columns:
-                        continue
+                matrix_check = pd.read_csv(matrix_addon_path, nrows=2)
+                if product not in matrix_check.columns:
+                    continue
 
-                matrix = dd.read_csv(matrix_addon_path, usecols=[f.Features.MSISDN_COL_NAME, product])
+                matrix = dd.read_csv(matrix_path, usecols=[f.Features.MSISDN_COL_NAME, product])
                 purchase_filter1 = purchase_filter_one_product.merge(matrix, on=msisdn_name, how='inner')
                 purchase_filter2 = purchase_filter1[purchase_filter1[product] > cfg.Config.threshold]
                 purchase_filter2 = purchase_filter2.drop(columns=[product])
@@ -328,14 +328,14 @@ def association_process(dag_run_id, db):
 
                 print('len of purchase in association_process ', len(purchase_filtered))
                 fp = Fpgrowth(purchase_filtered, dag_run_id, item=item)
-                print( 'fp.results is ',fp.results)
-                if fp.results is None or len(fp.results)==0:
+                print('fp.results is ', fp.results)
+                if fp.results is None or len(fp.results) == 0:
                     print('skipped this iteration')
                     continue
                 print('Fpgrowth completed')
                 uc = UpsellCrossell(dag_run_id=dag_run_id, pack_info=pack_info_df, result=fp.results, db=db)
                 uc.determine_service_type()
-                if len(uc.associations_df)<=2:
+                if len(uc.associations_df) <= 2:
                     continue
                 if uc.df_cross_df is not None and len(uc.df_cross_df) > 0:
                     uc.find_crossell(segement_name=item, cluster_number=cluster)
@@ -365,6 +365,7 @@ def encode_units(x):
     if x >= 1:
         return 1
 
+
 def getpackname(product_id, packinfo_df):
     product_name = "No product name"
     try:
@@ -382,6 +383,7 @@ def getpackname(product_id, packinfo_df):
         print("error occurred in getpackname ", e)
 
     return product_name
+
 
 class UpsellCrossell(object):
     def __init__(self, consequents_length=1, exclude_types=None,
@@ -427,9 +429,9 @@ class UpsellCrossell(object):
 
     def determine_service_type(self):
         try:
-            print('self.associations_df is ',self.associations_df)
-            print('self.associations_df.columns is ',self.associations_df.columns)
-            if len(self.associations_df)<=2:
+            print('self.associations_df is ', self.associations_df)
+            print('self.associations_df.columns is ', self.associations_df.columns)
+            if len(self.associations_df) <= 2:
                 return
             self.associations_df = self.associations_df[self.associations_df['consequents_length'] == 1]
             df = self.associations_df.apply(self.determine_service, axis=1)
@@ -549,11 +551,12 @@ class UpsellCrossell(object):
                 info.lift = round(float(row['lift']), 2)
                 print("row['conci'] is ", row['conci'])
 
-                info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                info.recommended_pack = str(getpackname(row['conci'], self.pack_info))
                 info.recommended_pack_id = str(row['conci'])
 
                 info.number_of_current_packs = int(row['antecedents_length'])
-                info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                info.current_pack = "|".join(
+                    [str(getpackname(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
                 info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
 
                 info.segement_name = segements.segment_name
@@ -695,11 +698,12 @@ class UpsellCrossell(object):
                     info.confidence = round(float(row['confidence']), 2)
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
-                    info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                    info.recommended_pack = str(getpackname(row['conci'], self.pack_info))
                     info.recommended_pack_id = str(row['conci'])
 
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack = "|".join(
+                        [str(getpackname(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
                     info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     info.segement_name = segements.segment_name
                     print('info.number_of_current_packs is', info.number_of_current_packs)
@@ -817,12 +821,13 @@ class UpsellCrossell(object):
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
 
-                    info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                    info.recommended_pack = str(getpackname(row['conci'], self.pack_info))
                     info.recommended_pack_id = str(row['conci'])
 
                     info.segement_name = segements.segment_name
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack = "|".join(
+                        [str(getpackname(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
                     info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
@@ -890,12 +895,13 @@ class UpsellCrossell(object):
                     info.lift = round(float(row['lift']), 2)
                     print("row['conci'] is ", row['conci'])
 
-                    info.recommended_pack = str(getpackname(row['conci'],self.pack_info))
+                    info.recommended_pack = str(getpackname(row['conci'], self.pack_info))
                     info.recommended_pack_id = str(row['conci'])
 
                     info.segement_name = segements.segment_name
                     info.number_of_current_packs = int(row['antecedents_length'])
-                    info.current_pack = "|".join([str(getpackname(i,self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.current_pack = "|".join(
+                        [str(getpackname(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
                     info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
@@ -1026,7 +1032,8 @@ class UpsellCrossell(object):
             info.segment_name = segements.segment_name
             info.dag_run_id = self.dag_run_id
             info.current_product = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
-            info.current_products_names = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+            info.current_products_names = "|".join(
+                [str(getpackname(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
             # if anticendent_number == 1:
             #     info.current_products_names = str(row['antecedents1'])
             # elif anticendent_number == 2:
@@ -1035,7 +1042,8 @@ class UpsellCrossell(object):
             #     info.current_products_names = str(row['antecedents1']) + str(row['antecedents2']) + str(
             #         row['antecedents3'])
             info.recommended_product_id = str(row['conci'])
-            info.recommended_product_name = str(row['conci'])
+
+            info.recommended_product_name = str(getpackname(row['conci'], self.pack_info))
             info.predicted_arpu = None
             info.current_arpu = None
             info.segment_length = segements.segment_length

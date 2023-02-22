@@ -424,6 +424,7 @@ def segmentaion_fun1(r, f, m):
 
 def rfm_process_quantile_method(dag_run_id):
     try:
+        pass
         file_name_dict = cfg.get_file_names()
         dtype_purchase = f.Features.TRANSACTION_DTYPES
         data = {}

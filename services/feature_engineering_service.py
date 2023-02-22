@@ -14,6 +14,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from pathlib import Path
 import vaex
 import pickle
+import services.rfm_service as rfm
 
 config = cfg.Config().to_json()
 features = f.Features().to_json()
@@ -362,6 +363,11 @@ def purchase_process(dag_run_id):
             data[month] = dd.read_csv(os.path.join(cfg.Config.etl_location, file_name_dict.get("purchase").get(month)),
                                       dtype=f.Features.TRANSACTION_DTYPES)
 
+        df_data = dd.concat(list(data.values()))
+        df_data = df_data.rename(columns={f.Features.TRANSACTION_PURCHASE_DATE_NAME: "purchase_date"})
+        path_pur = os.path.join(cfg.Config.ml_location, dag_run_id, "purchase_all_months")
+        Path(path_pur).mkdir(parents=True, exist_ok=True)
+        df_data.to_parquet(path_pur)
         # ic("the length of m1 in purchase ", len(data['m1']))
         # ic("the length of m2 in purchase ", len(data['m2']))
         # ic("the length of m3 in purchase ", len(data['m3']))
@@ -413,6 +419,64 @@ def association_process(dag_run_id):
     return schemas.BaseResponse(statusCode=200, message="success", status="success")
 
 
+def segment_data_with_rfm(recharge_trend_usage, purchase, dag_run_id):
+    path_dict = {}
+    try:
+        msisdn_name = f.Features.MSISDN_COL_NAME
+        list_df = []
+        for trend in recharge_trend_usage['trend'].unique():
+
+            temp = recharge_trend_usage[
+                (recharge_trend_usage['trend'] == trend)]
+            purchase_filter = purchase[purchase[msisdn_name].isin(np.array(temp[msisdn_name].values))]
+            if len(purchase_filter)== 0:
+                ic(f"no purchase for the trend  {trend}")
+                continue
+            ctm_class = rfm.perform_rfm(purchase_filter.copy(), period=60)
+            ctm_class = rfm.form_segements(ctm_class)
+            ctm_class = ctm_class[[msisdn_name, "Segment"]]
+            ctm_class_vaex = vaex.from_pandas(ctm_class.compute())
+            trend_rfm = temp.join(ctm_class_vaex, on=msisdn_name, how="inner")
+            list_df.append(trend_rfm)
+            for segement in trend_rfm['Segment'].unique():
+                temp = trend_rfm[(trend_rfm['Segment'] == segement)]
+                name = f"{trend}-{segement}"
+                name = r"" + name
+                file_name = f"{name}.csv"
+                print(' file_name is ', file_name)
+
+                length = len(temp)
+                if length > 0:
+                    path = os.path.join(cfg.Config.ml_location, dag_run_id, file_name)
+                    print(f"the length is suff {length} file name {name} ")
+                    # print('path_dict before is' ,path_dict)
+
+                    path_dict[str(name)] = str(path)
+                    # print('path_dict after  is' ,path_dict)
+
+                    temp.export_csv(r"" + path)
+                    print('file_exported')
+
+                else:
+                    print(f"the length is  insuff {length} file name {name} ")
+
+        path_d = os.path.join(cfg.Config.ml_location, dag_run_id, "dict.pickle")
+        print('path_d is', path_d)
+        print('path_dict is', path_dict)
+        with open(path_d, 'wb') as handle:
+            print('opened')
+            pickle.dump(path_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            print('path_dict dumped ')
+        df_f = vaex.concat(list_df)
+        df = df_f.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
+        df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
+
+    except Exception as e:
+        print("error occoured in segment_data")
+        traceback.print_exc()
+        raise Exception(e)
+
+
 def segment_data(recharge_trend_usage_rfm, dag_run_id):
     path_dict = {}
     try:
@@ -460,6 +524,10 @@ def segementation(dag_run_id):
         recharge = vaex.open(recharge_path, )
         print("loaded recharge")
 
+        path_pur = os.path.join(cfg.Config.ml_location, dag_run_id, "purchase_all_months")
+        pur_all_months = dd.read_parquet(path_pur)
+        print("purchase 3 months loaded")
+
         purchase_path = os.path.join(cfg.Config.ml_location, dag_run_id, "purchase_band")
         purchase = vaex.open(purchase_path)
         print("loaded purchase")
@@ -478,12 +546,13 @@ def segementation(dag_run_id):
         usage = vaex.open(usage_path)
         print("loaded usage")
 
-        rfm_path = os.path.join(cfg.Config.ml_location, dag_run_id, "rfm")
-        rfm = vaex.open(rfm_path)
-        rfm = rfm[['msisdn', 'Segment']]
+        # rfm_path = os.path.join(cfg.Config.ml_location, dag_run_id, "rfm")
+        # rfm = vaex.open(rfm_path)
+        # rfm = rfm[['msisdn', 'Segment']]
         print("loaded rfm")
         # ------------nnew logic----------------#
-        trend_rfm = trend.join(rfm, on='msisdn', how="inner")
+        # trend_rfm = trend.join(rfm, on='msisdn', how="inner")
+        trend_rfm = trend.copy()
         trend_rfm_recharge = trend_rfm.join(recharge, on='msisdn', how="left")
         trend_rfm_recharge['recharge_count_pattern_m1'] = trend_rfm_recharge['recharge_count_pattern_m1'].fillna("m1_0")
         trend_rfm_recharge['recharge_count_pattern_m2'] = trend_rfm_recharge['recharge_count_pattern_m2'].fillna("m2_0")
@@ -518,10 +587,10 @@ def segementation(dag_run_id):
         # df = recharge_trend_usage_rfm_pur.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
         # df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
         # ------------------------inner join logic  end-------------------------------#
-        df = trend_rfm_recharge_usage_purchase.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
-        df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
+        # df = trend_rfm_recharge_usage_purchase.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
+        # df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
 
-        segment_data(trend_rfm_recharge_usage_purchase, dag_run_id)
+        segment_data_with_rfm(trend_rfm_recharge_usage_purchase, pur_all_months.copy(), dag_run_id)
     except Exception as e:
         print(e)
         traceback.print_exc()
