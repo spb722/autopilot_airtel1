@@ -28,6 +28,7 @@ class AssociationInfo(BaseModel):
     service_type: Optional[str] = None
     type_info: Optional[str] = None
     segement_name: Optional[str] = None
+    recommendation_type: Optional[str] = None
 
 
 

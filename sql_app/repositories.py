@@ -68,7 +68,8 @@ class AssociationRepo:
                                          support=info.support, recommended_pack=info.recommended_pack,
                                          segement_name=info.segement_name,
                                          recommended_pack_id=info.recommended_pack_id,
-                                         current_pack_ids=info.current_pack_ids
+                                         current_pack_ids=info.current_pack_ids,
+                                         recommendation_type=info.recommendation_type
                                          )
         db.add(db_item)
         db.commit()

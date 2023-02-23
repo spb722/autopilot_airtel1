@@ -365,6 +365,23 @@ def encode_units(x):
     if x >= 1:
         return 1
 
+def getpacktype(product_id, packinfo_df):
+    product_name = "No product name"
+    try:
+        if (packinfo_df is not None):
+            if (product_id in packinfo_df['product_id'].values):
+
+                product_name = str(packinfo_df[packinfo_df['product_id'] == product_id].iloc[0]["type"])
+                print("the product name of ", product_id, " is ", product_name)
+            else:
+                print("product_id is not in dataframe  ")
+        else:
+            print("some problem with the  dataframe  ")
+
+    except Exception as e:
+        print("error occurred in getpackname ", e)
+
+    return product_name
 
 def getpackname(product_id, packinfo_df):
     product_name = "No product name"
@@ -560,6 +577,9 @@ class UpsellCrossell(object):
                 info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
 
                 info.segement_name = segements.segment_name
+                current_pack_types =  "|".join(
+                    [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                info.recommendation_type =f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
                 print("added crossel info to db")
                 AssociationRepo.create(db=self.db, info=info)
             # ------------------------adding to db -------------------------------#
@@ -711,6 +731,9 @@ class UpsellCrossell(object):
                     print('info.recommended_pack is', info.recommended_pack)
 
                     print('info is', info)
+                    current_pack_types = "|".join(
+                        [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.recommendation_type = f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
                     AssociationRepo.create(db=self.db, info=info)
                     print('all  inserted')
 
@@ -832,7 +855,9 @@ class UpsellCrossell(object):
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
-
+                    current_pack_types = "|".join(
+                        [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.recommendation_type = f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
                     AssociationRepo.create(db=self.db, info=info)
                 # ------------------------adding to db -------------------------------#
                 self.insert_segementinfo(segements, anticendent_number, data1, "upsell")
@@ -906,7 +931,9 @@ class UpsellCrossell(object):
                     print('info.number_of_current_packs is', info.number_of_current_packs)
                     print('info.current_pack is', info.current_pack)
                     print('info.recommended_pack is', info.recommended_pack)
-
+                    current_pack_types = "|".join(
+                        [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+                    info.recommendation_type = f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
                     AssociationRepo.create(db=self.db, info=info)
                 # ------------------------adding to db -------------------------------#
                 self.insert_segementinfo(segements, anticendent_number, data1, "upsell")

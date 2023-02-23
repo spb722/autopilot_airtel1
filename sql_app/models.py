@@ -95,4 +95,5 @@ class AssociationInfo(Base):
     service_type = Column(String(80), nullable=True, unique=False)
     type_info = Column(String(80), nullable=True, unique=False)
     segement_name = Column(String(80), nullable=True, unique=False)
+    recommendation_type = Column(String(80), nullable=True, unique=False)
 
