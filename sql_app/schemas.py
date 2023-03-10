@@ -58,6 +58,7 @@ class SegementInfo(BaseModel):
     query: Optional[str] = None
     cluster_no: Optional[int] = None
     confidence: Optional[float] = None
+    recommendation_type: Optional[str] = None
 
 
 class CreateSegment(SegementInfo):

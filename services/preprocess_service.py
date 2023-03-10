@@ -202,6 +202,7 @@ def pre_process(dag_run_id):
         tnm_data = TNMData(purchase_df=dd.concat(list(data.values())), pack_df=pack_info)
         pre_instance = PreprocessData(tnm_data, dag_run_id)
         # # merging purchase and pack
+
         pre_instance.pre_process_purchase()
         p_data = pre_instance.get_pre_processed_data()
         # forming user purchase count matrix

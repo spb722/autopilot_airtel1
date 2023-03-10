@@ -136,7 +136,7 @@ class Config:
     # pack_info_location = '/log/magikuser/autopilot_data/packinfo'
     # ml_location = '/log/magikuser/autopilot_data/ml'
     #
-    rule_converter_url = 'http://localhost:8092/requestconvertor/v1/convert/'
+    rule_converter_url = 'http://10.1.31.212:8090/requestconvertor/v1/convert/'
     segement_names = ['trend', 'rfm']
     source_purchase_and_etl_location = "C:/Users/spb72/OneDrive/Documents/6d/etl_files"
     purchase_location = "C:/Users/spb72/OneDrive/Documents/6d/etl_files"

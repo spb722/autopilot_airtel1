@@ -289,7 +289,7 @@ def join_rfm(x):
     return str(int(x['R_Score'])) + str(int(x['F_Score'])) + str(int(x['M_Score']))
 
 
-def perform_rfm(df_data_rfm, period=60):
+def perform_rfm(df_data_rfm, period=90):
 
     ic("inside perform_rfm")
 
@@ -425,32 +425,32 @@ def segmentaion_fun1(r, f, m):
 def rfm_process_quantile_method(dag_run_id):
     try:
         pass
-        file_name_dict = cfg.get_file_names()
-        dtype_purchase = f.Features.TRANSACTION_DTYPES
-        data = {}
-        print('purchase is going to  read')
-        for month in cfg.Config.purchase_no_months:
-            data[month] = dd.read_csv(
-                os.path.join(cfg.Config.purchase_location, file_name_dict.get("purchase").get(month)),
-                dtype=dtype_purchase)
-        print('purchase readed')
-        df_data = dd.concat(list(data.values()))
-        df_data = df_data.fillna(0, )
-        df_data = df_data.rename(columns={f.Features.TRANSACTION_PURCHASE_DATE_NAME: "purchase_date"})
-        ctm_class = perform_rfm(df_data, period=60)
-        path = os.path.join(cfg.Config.ml_location,dag_run_id, "rfm_before_segementation")
-        Path(path).mkdir(parents=True, exist_ok=True)
-        print(path)
-        ctm_class.to_parquet(path)
-        ctm_class = form_segements(ctm_class)
-        print("done with rfm outputing the file ongoing")
-        path = os.path.join(cfg.Config.ml_location,dag_run_id, "rfm")
-        Path(path).mkdir(parents=True, exist_ok=True)
-        print(path)
-        ctm_class.to_parquet(path)
+        # file_name_dict = cfg.get_file_names()
+        # dtype_purchase = f.Features.TRANSACTION_DTYPES
+        # data = {}
+        # print('purchase is going to  read')
+        # for month in cfg.Config.purchase_no_months:
+        #     data[month] = dd.read_csv(
+        #         os.path.join(cfg.Config.purchase_location, file_name_dict.get("purchase").get(month)),
+        #         dtype=dtype_purchase)
+        # print('purchase readed')
+        # df_data = dd.concat(list(data.values()))
+        # df_data = df_data.fillna(0, )
+        # df_data = df_data.rename(columns={f.Features.TRANSACTION_PURCHASE_DATE_NAME: "purchase_date"})
+        # ctm_class = perform_rfm(df_data, period=60)
+        # path = os.path.join(cfg.Config.ml_location,dag_run_id, "rfm_before_segementation")
+        # Path(path).mkdir(parents=True, exist_ok=True)
+        # print(path)
+        # ctm_class.to_parquet(path)
+        # ctm_class = form_segements(ctm_class)
+        # print("done with rfm outputing the file ongoing")
+        # path = os.path.join(cfg.Config.ml_location,dag_run_id, "rfm")
+        # Path(path).mkdir(parents=True, exist_ok=True)
+        # print(path)
+        # ctm_class.to_parquet(path)
 
-        ic("rfm segement value counts", ctm_class['Segment'].value_counts().compute())
-        print("done with rfm outputing the file done ")
+        # ic("rfm segement value counts", ctm_class['Segment'].value_counts().compute())
+        # print("done with rfm outputing the file done ")
 
     except Exception as e:
         print(e)

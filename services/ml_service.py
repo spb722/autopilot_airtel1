@@ -20,6 +20,7 @@ from pathlib import Path
 from sql_app.repositories import AssociationRepo
 import services.rule_serive as rls
 import requests
+from db import engine
 
 config = cfg.Config().to_json()
 features = f.Features().to_json()
@@ -194,7 +195,7 @@ def matrix_filter(dag_run_id):
                     purchase_filter[f.Features.TRANSACTION_PRODUCT_NAME] == product]
                 # read the mathix
                 product = str(product)
-                matrix_check = pd.read_csv(matrix_addon_path, nrows=2)
+                matrix_check = pd.read_csv(matrix_path, nrows=2)
                 if product not in matrix_check.columns:
                     continue
 
@@ -365,6 +366,7 @@ def encode_units(x):
     if x >= 1:
         return 1
 
+
 def getpacktype(product_id, packinfo_df):
     product_name = "No product name"
     try:
@@ -382,6 +384,7 @@ def getpacktype(product_id, packinfo_df):
         print("error occurred in getpackname ", e)
 
     return product_name
+
 
 def getpackname(product_id, packinfo_df):
     product_name = "No product name"
@@ -577,9 +580,9 @@ class UpsellCrossell(object):
                 info.current_pack_ids = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
 
                 info.segement_name = segements.segment_name
-                current_pack_types =  "|".join(
+                current_pack_types = "|".join(
                     [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
-                info.recommendation_type =f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
+                info.recommendation_type = f"{current_pack_types} - {getpacktype(row['conci'], self.pack_info)}"
                 print("added crossel info to db")
                 AssociationRepo.create(db=self.db, info=info)
             # ------------------------adding to db -------------------------------#
@@ -733,7 +736,7 @@ class UpsellCrossell(object):
                     print('info is', info)
                     current_pack_types = "|".join(
                         [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
-                    info.recommendation_type = f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
+                    info.recommendation_type = f"{current_pack_types} - {getpacktype(row['conci'], self.pack_info)}"
                     AssociationRepo.create(db=self.db, info=info)
                     print('all  inserted')
 
@@ -857,7 +860,7 @@ class UpsellCrossell(object):
                     print('info.recommended_pack is', info.recommended_pack)
                     current_pack_types = "|".join(
                         [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
-                    info.recommendation_type = f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
+                    info.recommendation_type = f"{current_pack_types} - {getpacktype(row['conci'], self.pack_info)}"
                     AssociationRepo.create(db=self.db, info=info)
                 # ------------------------adding to db -------------------------------#
                 self.insert_segementinfo(segements, anticendent_number, data1, "upsell")
@@ -933,7 +936,7 @@ class UpsellCrossell(object):
                     print('info.recommended_pack is', info.recommended_pack)
                     current_pack_types = "|".join(
                         [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
-                    info.recommendation_type = f"{current_pack_types} - {getpackname(row['conci'], self.pack_info)}"
+                    info.recommendation_type = f"{current_pack_types} - {getpacktype(row['conci'], self.pack_info)}"
                     AssociationRepo.create(db=self.db, info=info)
                 # ------------------------adding to db -------------------------------#
                 self.insert_segementinfo(segements, anticendent_number, data1, "upsell")
@@ -1058,7 +1061,8 @@ class UpsellCrossell(object):
             info = schemas.SegementInfo()
             info.segment_name = segements.segment_name
             info.dag_run_id = self.dag_run_id
-            info.current_product = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+            current_product_id = "|".join([str(i) for i in list(eval(str(row['antecedents1'])))])
+            info.current_product = current_product_id
             info.current_products_names = "|".join(
                 [str(getpackname(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
             # if anticendent_number == 1:
@@ -1068,9 +1072,12 @@ class UpsellCrossell(object):
             # else:
             #     info.current_products_names = str(row['antecedents1']) + str(row['antecedents2']) + str(
             #         row['antecedents3'])
-            info.recommended_product_id = str(row['conci'])
+
+            rec_product_id = str(row['conci'])
+            info.recommended_product_id = rec_product_id
 
             info.recommended_product_name = str(getpackname(row['conci'], self.pack_info))
+
             info.predicted_arpu = None
             info.current_arpu = None
             info.segment_length = segements.segment_length
@@ -1090,6 +1097,10 @@ class UpsellCrossell(object):
             info.query = segements.query
             info.cluster_no = segements.cluster_no
             info.confidence = round(float(row['confidence']), 2)
+            current_pack_types = "|".join(
+                [str(getpacktype(i, self.pack_info)) for i in list(eval(str(row['antecedents1'])))])
+            info.recommendation_type = f"{current_pack_types} - {getpacktype(row['conci'], self.pack_info)}"
+
             segments_list.append(info)
 
         for segment in segments_list:
@@ -1231,9 +1242,10 @@ def rule_extraction(dag_run_id, db):
 def otliner_removal(df, per=0.97):
     try:
         # df = df["needed_col"]
-        q = df['tot_rev'].quantile(per)
+        tot_rev = f.Features.CUSTOMER_TOTAL_REVENUE[0]
+        q = df[tot_rev].quantile(per)
         print("the length brfore is", len(df))
-        df = df[df['tot_rev'] < q]
+        df = df[df[tot_rev] < q]
         print("the length after is", len(df))
         return df
     except Exception as e:
@@ -1333,13 +1345,118 @@ def make_request(body):
         raise RuntimeError(e)
 
 
+def negate(rule):
+    mapper = (("<=", ">"), (">=", "<"), (">", "<="), ("<", ">="), ("==", '!='))
+    for operator, negated in mapper:
+        if operator in rule:
+            return rule.replace(operator, negated)
+    return "not (" + rule + ")"  # Default when operator not recognised
+
+
+def nodeToLeafPaths(node):
+    if not node:  # base case: nothing in this direction
+        return
+    rule = node.get('rule')
+    if rule is None:  # base case: a leaf with a value
+        # value_list.append(node.get('value'))
+        yield [], int(node.get('samples'))  # empty path
+        return
+
+    negated_rule = negate(rule)
+    for path, value in nodeToLeafPaths(node.get('left')):
+        # print(f"the left path {path} and value {value} ")
+        if 'between' in rule:
+            between_split = rule.split('between')
+            key = between_split[0].strip()
+            value_temp = between_split[1].strip()
+            ant_split = value_temp.split("and")
+            value1 = ant_split[0].strip()
+            value2 = ant_split[1].strip()
+
+            rule = f"{key} > {round(float(value1), 2)} and {key} <= {round(float(value2), 2)}"
+
+        yield [rule, *path], value  # Extend path with current rule
+    for path, value in nodeToLeafPaths(node.get('right')):
+        yield [negated_rule, *path], value
+
+
+# Transform paths (lists) to AND-rules (strings):
+def rootToLeafConjugations(root):
+    print('inside rootToLeafConjugations ')
+    final_dic = {}
+    for path, value in nodeToLeafPaths(root):
+        final_dic[" and ".join(path)] = value
+        # print({" AND ".join(path):value  for path ,value in nodeToLeafPaths(root) })
+    return final_dic
+
+
+def get_prod_diff(product_id_1, product_id_2, packinfo_df):
+    print('packinfo_df.columns', packinfo_df.columns)
+    diff = 0
+    try:
+        if isinstance(product_id_1, str):
+            split = product_id_1.split("|")
+            print('split is ', split)
+            split_length = len(split)
+            if split_length > 1:
+                max = 0
+                for i in range(split_length):
+                    product = int(float(split[i]))
+                    print('product is ', product)
+                    price = packinfo_df[packinfo_df['product_id'] == product].iloc[0]["price"]
+                    print('price is', price)
+                    if price > max:
+                        max = price
+
+                product_id_1 = packinfo_df[packinfo_df['price'] == max].iloc[0]["product_id"]
+                print('product_id_1 is', product_id_1)
+
+            else:
+                product_id_1 = int(split[0])
+
+        if packinfo_df is not None:
+            print('product_id_1 is ', product_id_1)
+            print('product_id_2 is ', product_id_2)
+            print("packinfo_df['product_id'].values", packinfo_df['product_id'].values)
+            if product_id_1 in packinfo_df['product_id'].values:
+                print('product_id_1 ture')
+
+            print('packinfo_df.columns', packinfo_df.columns)
+            if product_id_2 in packinfo_df['product_id'].values:
+                print('product_id_2 ture')
+
+            else:
+                print('product_id_2 fasle')
+
+            if ((product_id_1 in packinfo_df['product_id'].values) and (
+                    product_id_2 in packinfo_df['product_id'].values)):
+
+                print('going to calcualte the diff ')
+
+                diff = abs(int(float(packinfo_df[packinfo_df['product_id'] == product_id_1].iloc[0]["price"]) -
+                               float(packinfo_df[packinfo_df['product_id'] == product_id_2].iloc[0]["price"])))
+
+                print("the difference is ", diff)
+            else:
+                print("product_id is not in dataframe  ")
+        else:
+            print("some problem with the  dataframe  ")
+
+    except Exception as e:
+        print("error occurred in get_prod_diff ", e)
+
+    return diff
+
+
 class RuleGenerator(object):
-    def __init__(self, df, dag_run_id, cluster_name, cluster_number, purchase_filtered):
+    def __init__(self, df, dag_run_id, cluster_name, cluster_number, purchase_filtered, pack_info):
         self.df = df
         self.dag_run_id = dag_run_id
         self.cluster_name = cluster_name
         self.cluster_name = cluster_number
         self.purchase = purchase_filtered
+        self.usage_filter2 = None
+        self.pack_info = pack_info
         pass
 
     def generate_rules(self, segementss, usage):
@@ -1353,10 +1470,16 @@ class RuleGenerator(object):
             anti = [int(x) for x in segements.current_product.split("|")]
             anti.append(conci)
             df = form_data(p2=self.purchase, df=usage_filter1, anti_conci=anti)
+
+            self.usage_filter2 = usage_filter1.merge(self.df[['msisdn', 'Segment', 'trend']], on='msisdn', how='inner')
             value_counts = df['label'].value_counts()
             if 0 in value_counts.index and 1 in value_counts.index:
-                if value_counts.loc[0] >= 100 and value_counts.loc[1] >= 100:
+                if value_counts.loc[0] >= 50 and value_counts.loc[1] >= 50:
                     print("Both values have at least two entries")
+                    # path_temp = os.path.join(cfg.Config.ml_location, self.dag_run_id, "model")
+                    # Path(path_temp).mkdir(parents=True, exist_ok=True)
+                    # df.to_csv(os.path.join(path_temp, segements.segment_name + ".csv"), header=True, index=False)
+                    # ic("outputerrrrddddd")
                 else:
                     print("At least one value doesn't have two entries")
                     continue
@@ -1365,6 +1488,11 @@ class RuleGenerator(object):
                 continue
 
             clf1, features = rls.train_model(df)
+            features = list(features)
+            print('features is ', features)
+            print('type features is ', type(features))
+            features.append('m1_total_revenue')
+            features = list(set(features))
             decision_tree_obj = rls.DecisionTreeConverter(clf1, features, ['differentpack', 'whatsappPack'],
                                                           df[df['label'] == 1])
             treetojson = decision_tree_obj.get_json()
@@ -1377,10 +1505,49 @@ class RuleGenerator(object):
             segement_names = cfg.Config.segement_names
             segement_values = segements.segment_name.split("-")[:-1]
             prune_tree1 = add_clusters_rules(segement_names, segement_values, prune_tree)
-            segements.rule = json.dumps(prune_tree1)
-            # segements.rule = make_request(prune_tree1)
+
+            final = rootToLeafConjugations(prune_tree)
+            print('after  rootToLeafConjugations ')
+            samples = sum(final.values())
+            rule = " or ".join(list(final.keys()))
+
+            # segements.rule = json.dumps(prune_tree1)
+
+            segements.rule = make_request(prune_tree1)
+            segements.query = rule
+            print('rule is', rule)
+            print('going to query')
+            print('columns of self.usage_filter2 is ', self.usage_filter2.columns)
+            temp = self.usage_filter2.query(rule)
+            if temp is None or len(temp) == 0:
+                continue
+            print('len of temp is ', len(temp))
+
+            segements.samples = samples
+
+            segements.current_arpu = int(temp['m1_total_revenue'].mean())
+            current_product_id = segements.current_product
+            rec_product_id = int(segements.recommended_product_id)
+
+            incremental_revenue = get_prod_diff(current_product_id, rec_product_id, self.pack_info) * samples
+            incremental_revenue = (incremental_revenue / 80) * 100
+            initial_sum = temp['m1_total_revenue'].sum()
+            uplift = (incremental_revenue / initial_sum) * 100
+            segements.uplift = round(uplift, 2)
+            segements.incremental_revenue = incremental_revenue
+
+            segements.predicted_arpu = int(segements.current_arpu + uplift)
+
             segment_list.append(segements)
         return segment_list
+
+
+def filter_data(temp_df):
+    cols = [p + "_" + s for s in f.Features.CUSTOMER_NEEDED_COLUMN for p in cfg.Config.usage_no_months]
+    cols.append("msisdn")
+    temp_df = temp_df[cols]
+
+    return temp_df
 
 
 def rule_generation(dag_run_id, db):
@@ -1399,7 +1566,7 @@ def rule_generation(dag_run_id, db):
             df = data.get(month)
             df = df.fillna(0)
             total_revenue = f.Features.CUSTOMER_TOTAL_REVENUE[0]
-            df['tot_rev'] = df[total_revenue]
+            # df['tot_rev'] = df[total_revenue]
             df = otliner_removal(df.copy())
             df = df.add_prefix(f"{month}_")
             df = df.rename(columns={f"{month}_msisdn": "msisdn"})
@@ -1410,7 +1577,7 @@ def rule_generation(dag_run_id, db):
                 temp_df = temp_df.merge(df, on='msisdn', how="left")
                 temp_df = temp_df.fillna(0)
         temp_df = temp_df.compute()
-
+        temp_df = filter_data(temp_df)
         result_dict_path = os.path.join(cfg.Config.ml_location, dag_run_id, "purchased_for_association", 'dict.pickle')
         data_path = os.path.join(cfg.Config.ml_location, dag_run_id, "dict.pickle")
         data_dict = load_picke_file(data_path)
@@ -1431,16 +1598,33 @@ def rule_generation(dag_run_id, db):
 
                 print('len of purchase in association_process ', len(purchase_filtered))
                 rg = RuleGenerator(df=data, dag_run_id=dag_run_id, cluster_name=item, cluster_number=cluster,
-                                   purchase_filtered=purchase_filtered)
+                                   purchase_filtered=purchase_filtered, pack_info=pack_info_df)
                 segements = SegementRepo.findByAutoPilotIdAndSegementNameAll(db=db, _id=dag_run_id,
                                                                              segement_name=segements_name,
                                                                              cluster_number=int(cluster))
                 if segements is None:
                     continue
+
+                # check service info for which segement to give which serives
+                # service_df = pd.read_sql_table('service_info', engine)
+                # segements_data = item.split("-")
+                # trent = segements_data[0]
+                # rfm = segements_data[1]
+                # q = f"trend == '{trent}' and rfm == '{rfm}'"
+                # service_df = service_df.query(q).iloc[:, 3:]
+                # if not service_df.empty and service_df.all().all():
+                #     print("All boolean columns are True.")
+                # else:
+                #     print("Not all boolean columns are True or no rows matched the query.")
+
                 segements_new = rg.generate_rules(segements, temp_df)
                 for seg in segements_new:
                     if seg is not None:
-                        SegementRepo.update(db=db, item_data=seg)
+                        if seg.rule is not None:
+                            SegementRepo.update(db=db, item_data=seg)
+                        else:
+                            print("deleting segement")
+                            SegementRepo.deleteById(db=db, _ids=[seg.id])
 
 
     except Exception as e:

@@ -20,7 +20,9 @@ class SegementRepo:
                                             current_revenue_impact=segement.current_revenue_impact,
                                             customer_status=segement.customer_status,
                                             segment_name=segement.segment_name, query=segement.query,
-                                            cluster_no=segement.cluster_no,confidence= segement.confidence)
+                                            cluster_no=segement.cluster_no, confidence=segement.confidence,
+                                            recommendation_type=segement.recommendation_type
+                                            )
         db.add(db_item)
         db.commit()
         db.refresh(db_item)

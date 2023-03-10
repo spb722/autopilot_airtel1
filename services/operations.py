@@ -47,8 +47,6 @@ def matrix_operations(dag_run_id):
         traceback.print_exc()
         raise HTTPException(status_code=400, detail="error occoureds in read and process rfm" + str(e))
     return schemas.BaseResponse(statusCode=200, message="success", status="success")
-
-
 def matrix_operations_one(dag_run_id):
     try:
         matrix_pack_features = pd.read_csv(

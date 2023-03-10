@@ -86,14 +86,97 @@ class Features:
     CUSTOMER_DATA_COL_NAME = ['total_data_usage']
     CUSTOMER_TOTAL_REVENUE = ['total_revenue']
     CUSTOMER_DATA_REVENUE = ["", "", "total_data_rev"]
+    CUSTOMER_NEEDED_COLUMN = [
+                              'onnet_revenue',
+                              'onnet_duration',
+                              'onnet_usage_ma',
+                              'onnet_usage_da_cur_account',
+                              'onnet_usage_da',
+                              'onnet_usage',
+                              'onnet_voice_count',
+                              'onnet_da_revenue',
+                              'offnet_revenue',
+                              'offnet_duration',
+                              'offnet_usage_ma',
+                              'offnet_usage_da_cur_account',
+                              'offnet_usage_da',
+                              'offnet_usage',
+                              'offnet_voice_count',
+                              'offnet_da_revenue',
+                              'idd_revenue',
+                              'idd_duration',
+                              'idd_usage_ma',
+                              'idd_usage_da_cur_account',
+                              'idd_usage_da',
+                              'idd_usage',
+                              'idd_voice_count',
+                              'idd_da_revenue',
+                              'voice_rmg_revenue',
+                              'voice_rmg_duration',
+                              'voice_rmg_usage_ma',
+                              'voice_rmg_usage_da_cur_account',
+                              'voice_rmg_usage_da',
+                              'voice_rmg_usage',
+                              'voice_rmg_count',
+                              'voice_rmg_da_revenue',
+                              'data_rmg_revenue',
+                              'data_rmg_duration',
+                              'data_rmg_usage_ma',
+                              'data_rmg_usage_da_cur_account',
+                              'data_rmg_usage_da',
+                              'data_rmg_usage',
+                              'data_rmg_da_revenue',
+                              'data_revenue',
+                              'data_duration',
+                              'data_usage_ma',
+                              'data_usage_da_cur_account',
+                              'data_usage_da',
+                              'data_usage',
+                              'da_data_rev',
+                              'sms_revenue',
+                              'sms_usage_ma',
+                              'sms_usage_da_cur_account',
+                              'sms_usage_da',
+                              'sms_usage',
+                              'sms_da_revenue',
+                              'sms_idd_revenue',
+                              'sms_idd_duration',
+                              'sms_idd_usage_ma',
+                              'sms_idd_usage_da_cur_account',
+                              'sms_idd_usage_da',
+                              'sms_idd_usage',
+                              'sms_idd_da_revenue',
+
+                              'onn_rev',
+                              'off_rev',
+                              'total_data_rev',
+                              'vas_rev',
+                              'vas_rev_others',
+                              'total_revenue',
+                              'total_voice_count',
+                              'total_voice_duration',
+                              'total_mainaccount_data_usage',
+                              'total_sms_count',
+                              'total_package_count',
+                              'recharge_count',
+                              'total_other_vas_count',
+                              'voice_rev',
+                              'sms_rev',
+                              'total_voice_usage',
+                              'total_data_usage',
+                              'total_sms_usage']
 
     CUSTOMER_FEATURES = CUSTOMER_CATEG_FEATURES + CUSTOMER_CONTI_FEATURES
 
     CUSTOMER_DTYPES = {'total_revenue': 'float32'}
 
-    RECHARGE_DTYPES = {'total_recharge_cnt': 'float32', 'total_rechargeamount': 'float32'}
-    RECHARGE_COUNT_COL_NAME = 'total_recharge_cnt'
-    RECHARGE_NEEDED_COL = ['msisdn', 'total_recharge_cnt']
+    # RECHARGE_DTYPES = {'total_recharge_cnt': 'float32', 'total_rechargeamount': 'float32'}
+    # RECHARGE_COUNT_COL_NAME = 'total_recharge_cnt'
+    # RECHARGE_NEEDED_COL = ['msisdn', 'total_recharge_cnt']
+
+    RECHARGE_DTYPES = {'total_package_id': 'float32', 'total_package_revenue': 'float32'}
+    RECHARGE_COUNT_COL_NAME = 'total_package_id'
+    RECHARGE_NEEDED_COL = ['msisdn', 'total_package_id']
 
     LABEL1 = 'downtrend'
     LABEL2 = 'uptrend'

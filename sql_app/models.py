@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, DateTime
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, DateTime,Boolean
 from sqlalchemy.orm import relationship
 import datetime
 from db import Base
@@ -35,14 +35,23 @@ class Stats(Base):
 #     segement_name = Column(String(80), nullable=False, unique=True)
 #     segement_path = Column(String(80), nullable=False, unique=True)
 
-
+class ServiceInfo(Base):
+    __tablename__ = 'service_info'
+    id = Column(Integer, primary_key=True, index=True)
+    trend = Column(String(80), nullable=True, unique=False)
+    rfm = Column(String(80), nullable=True, unique=False)
+    Upsell = Column(Boolean, nullable=True, unique=False)
+    crossell = Column(Boolean, nullable=True, unique=False)
+    churn = Column(Boolean, nullable=True, unique=False)
+    nbo = Column(Boolean, nullable=True, unique=False)
+    inactive = Column(Boolean, nullable=True, unique=False)
 class SegmentInformation(Base):
     __tablename__ = "segment_information_new_7"
     id = Column(Integer, primary_key=True, index=True)
     created_date = Column(DateTime, default=datetime.datetime.utcnow)
     end_date = Column(DateTime)
     current_product = Column(String(80), nullable=True, unique=False)
-    current_products_names = Column(String(180), nullable=True, unique=False)
+    current_products_names = Column(String(200), nullable=True, unique=False)
     recommended_product_id = Column(String(80), nullable=True, unique=False)
     recommended_product_name = Column(String(80), nullable=True, unique=False)
     predicted_arpu = Column(Integer, nullable=True)
@@ -65,6 +74,7 @@ class SegmentInformation(Base):
     query = Column(LONGTEXT, nullable=True, unique=False)
     cluster_no = Column(Integer, nullable=True)
     confidence = Column(Float(precision=2), nullable=True)
+    recommendation_type = Column(String(80), nullable=True, unique=False)
 
     def __repr__(self):
         return 'SegmentInformation(name=%s)' % self.name
@@ -84,8 +94,8 @@ class AssociationInfo(Base):
     id = Column(Integer, primary_key=True, index=True)
     dag_run_id = Column(String(80), nullable=False)
     created_date = Column(DateTime, default=datetime.datetime.utcnow)
-    current_pack = Column(String(80), nullable=True, unique=False)
     current_pack_ids=Column(String(80), nullable=True, unique=False)
+    current_pack=Column(String(200), nullable=True, unique=False)
     number_of_current_packs = Column(Integer, nullable=True)
     recommended_pack = Column(String(80), nullable=True, unique=False)
     recommended_pack_id=Column(String(80), nullable=True, unique=False)
@@ -96,4 +106,3 @@ class AssociationInfo(Base):
     type_info = Column(String(80), nullable=True, unique=False)
     segement_name = Column(String(80), nullable=True, unique=False)
     recommendation_type = Column(String(80), nullable=True, unique=False)
-

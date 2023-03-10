@@ -15,10 +15,12 @@ from pathlib import Path
 import vaex
 import pickle
 import services.rfm_service as rfm
+import db
 
 config = cfg.Config().to_json()
 features = f.Features().to_json()
 import sql_app.schemas as schemas
+from db import engine
 
 
 def put_revenue_segement(x):
@@ -293,7 +295,11 @@ def recharge_process(dag_run_id):
         # ic("the length of unique msisdn m3 in recharge ", data['m1']['msisdn'].nunique().compute())
         # ic("the length of unique msisdn m3 in recharge ", data['m2']['msisdn'].nunique().compute())
         # ic("the length of unique msisdn m3 in recharge ", data['m3']['msisdn'].nunique().compute())
-
+        df_data = dd.concat(list(data.values()))
+        df_data = df_data.rename(columns={f.Features.TRANSACTION_PURCHASE_DATE_NAME: "purchase_date"})
+        path_recharge = os.path.join(cfg.Config.ml_location, dag_run_id, "recharge_all_months")
+        Path(path_recharge).mkdir(parents=True, exist_ok=True)
+        df_data.to_parquet(path_recharge)
         rb = RechargeBanding(data)
         print("recharge categorizing ongoing ")
         df = rb.categorize()
@@ -421,6 +427,7 @@ def association_process(dag_run_id):
 
 def segment_data_with_rfm(recharge_trend_usage, purchase, dag_run_id):
     path_dict = {}
+
     try:
         msisdn_name = f.Features.MSISDN_COL_NAME
         list_df = []
@@ -429,13 +436,15 @@ def segment_data_with_rfm(recharge_trend_usage, purchase, dag_run_id):
             temp = recharge_trend_usage[
                 (recharge_trend_usage['trend'] == trend)]
             purchase_filter = purchase[purchase[msisdn_name].isin(np.array(temp[msisdn_name].values))]
-            if len(purchase_filter)== 0:
+            if len(purchase_filter) == 0:
                 ic(f"no purchase for the trend  {trend}")
                 continue
-            ctm_class = rfm.perform_rfm(purchase_filter.copy(), period=60)
+            ctm_class = rfm.perform_rfm(purchase_filter.copy(), period=90)
             ctm_class = rfm.form_segements(ctm_class)
             ctm_class = ctm_class[[msisdn_name, "Segment"]]
+            ic("trend is ", trend, " and its rfm segement value counts", ctm_class['Segment'].value_counts().compute())
             ctm_class_vaex = vaex.from_pandas(ctm_class.compute())
+
             trend_rfm = temp.join(ctm_class_vaex, on=msisdn_name, how="inner")
             list_df.append(trend_rfm)
             for segement in trend_rfm['Segment'].unique():
@@ -468,8 +477,15 @@ def segment_data_with_rfm(recharge_trend_usage, purchase, dag_run_id):
             pickle.dump(path_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
             print('path_dict dumped ')
         df_f = vaex.concat(list_df)
-        df = df_f.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
-        df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
+        # df = df_f.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
+        # df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
+        # df_f = df_f[['msisdn', 'trend', 'Segment']]
+        # df_f.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"), index=True, index_label='id')
+        #
+        # for df_chunk in pd.read_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"),
+        #                             chunksize=10000):
+        #     # insert each chunk into database table
+        #     df_chunk.to_sql('rfm_segement', engine, if_exists='append', index=False)
 
     except Exception as e:
         print("error occoured in segment_data")
@@ -532,6 +548,10 @@ def segementation(dag_run_id):
         purchase = vaex.open(purchase_path)
         print("loaded purchase")
 
+        path_recharge = os.path.join(cfg.Config.ml_location, dag_run_id, "recharge_all_months")
+        recharge_all_months = dd.read_parquet(path_recharge)
+        print("recharge 3 months loaded")
+
         trend_path = os.path.join(cfg.Config.ml_location, dag_run_id, "trend_filtered")
         trend = vaex.open(trend_path)
         print("loaded trend")
@@ -590,7 +610,7 @@ def segementation(dag_run_id):
         # df = trend_rfm_recharge_usage_purchase.groupby(["trend", 'Segment']).agg({"msisdn": "count"})
         # df.export_csv(os.path.join(cfg.Config.ml_location, dag_run_id, "trend_segment.csv"))
 
-        segment_data_with_rfm(trend_rfm_recharge_usage_purchase, pur_all_months.copy(), dag_run_id)
+        segment_data_with_rfm(trend_rfm_recharge_usage_purchase, recharge_all_months.copy(), dag_run_id)
     except Exception as e:
         print(e)
         traceback.print_exc()
