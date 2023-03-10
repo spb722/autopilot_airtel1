@@ -1536,6 +1536,14 @@ class RuleGenerator(object):
             segements.uplift = round(uplift, 2)
             segements.incremental_revenue = incremental_revenue
 
+
+            segment_length=str(len(self.df))
+            print('segment_length is' ,segment_length)
+
+            segements.segment_length = segment_length
+
+
+
             segements.predicted_arpu = int(segements.current_arpu + uplift)
 
             segment_list.append(segements)
@@ -1597,7 +1605,7 @@ def rule_generation(dag_run_id, db):
                 purchase_filtered = purchase[purchase[msisdn_name].isin(data_temp[msisdn_name])]
 
                 print('len of purchase in association_process ', len(purchase_filtered))
-                rg = RuleGenerator(df=data, dag_run_id=dag_run_id, cluster_name=item, cluster_number=cluster,
+                rg = RuleGenerator(df=data_temp, dag_run_id=dag_run_id, cluster_name=item, cluster_number=cluster,
                                    purchase_filtered=purchase_filtered, pack_info=pack_info_df)
                 segements = SegementRepo.findByAutoPilotIdAndSegementNameAll(db=db, _id=dag_run_id,
                                                                              segement_name=segements_name,
